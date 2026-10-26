@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.1.0 — 2026-10-26
+## Unreleased
+
+- Added `docs/roadmap.md`, the full gap-closure plan.
+- Pad actions pause while the Settings window is focused; Preview and the tray
+  legend still work.
+
+## 0.1.0 - 2026-10-26
 
 First public prototype.
 
