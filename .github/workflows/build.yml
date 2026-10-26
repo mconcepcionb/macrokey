@@ -17,7 +17,7 @@ jobs:
       run:
         working-directory: agent/src-tauri
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@1.98.1
         with:
@@ -41,7 +41,7 @@ jobs:
 
       - name: Upload portable binary
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macrokey-agent-windows-x64
           path: agent/src-tauri/target/release/macrokey-agent.exe
