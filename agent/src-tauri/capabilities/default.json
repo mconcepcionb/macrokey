@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Local UI windows. The Settings page uses the app's custom IPC commands; no remote content is loaded.",
+  "windows": ["osd", "settings"],
+  "permissions": ["core:default"]
+}

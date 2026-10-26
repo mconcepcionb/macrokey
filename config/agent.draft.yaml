@@ -1,0 +1,212 @@
+# This file is the SEED for a fresh database, not the live configuration.
+#
+# The agent stores runtime state in %APPDATA%\macrokey\macrokey.db and you edit
+# it from the app: tray icon -> Settings…
+#
+# Contexts own layers. A context is chosen by the focused app (or the fallback
+# "general"); each context has its own default layer and an ordered list of
+# layers you can switch between.
+#
+#   General  -> media, nav
+#   VS Code  -> edit, nav, debug, build
+#   opencode -> chat, nav
+#   VLC      -> playback
+#   Steam    -> browse
+#
+# Layers are a shared library: "nav" is the same layer in General, VS Code and
+# opencode. Edit it once.
+
+version: 3
+
+pad:
+  vid: 0x1189
+  pid: 0x8890
+  interface: MI_00
+  inputs:
+    k1: F13
+    k2: F14
+    k3: F15
+    knob_press: F16
+    knob_ccw: F17
+    knob_cw: F18
+
+settings:
+  osd:
+    enabled: true
+    duration_ms: 1500
+    monitor: primary
+    anchor: bottom-center
+    show_on_focus: false
+    show_on_press: true
+  gestures:
+    double_tap_ms: 260
+    hold_ms: 420
+  knob:
+    acceleration: true
+    window_ms: 120
+    multiplier: [1, 1, 2, 4, 8]
+
+contexts:
+
+  general:
+    label: General
+    default_layer: media
+    layers: [media, nav]
+
+  vscode:
+    label: VS Code
+    default_layer: edit
+    layers: [edit, nav, debug, build]
+
+  opencode:
+    label: opencode
+    default_layer: chat
+    layers: [chat, nav]
+
+  vlc:
+    label: VLC
+    default_layer: playback
+    layers: [playback]
+
+  steam:
+    label: Steam
+    default_layer: browse
+    layers: [browse]
+
+layers:
+
+  media:
+    label: Media
+    color: "#7dd3fc"
+    bindings:
+      k1: { action: media, key: previous }
+      k2: { action: media, key: play }
+      k3:
+        tap: { action: media, key: next }
+        hold: { action: peek }
+      knob_ccw: { action: media, key: volume_down }
+      knob_cw:  { action: media, key: volume_up }
+      knob_press:
+        tap: { action: media, key: mute }
+        double: { action: layer, mode: next }
+        hold: { action: peek }
+
+  nav:
+    label: Nav
+    color: "#fbbf24"
+    bindings:
+      k1: { action: hotkey, keys: [left] }
+      k2: { action: hotkey, keys: [down] }
+      k3: { action: hotkey, keys: [right] }
+      knob_ccw: { action: hotkey, keys: [up] }
+      knob_cw:  { action: hotkey, keys: [down] }
+      knob_press:
+        tap: { action: hotkey, keys: [enter] }
+        double: { action: layer, mode: next }
+        hold: { action: layer, mode: back }
+
+  edit:
+    label: Edit
+    color: "#63b3ed"
+    bindings:
+      k1:
+        tap: { action: hotkey, keys: [ctrl, s] }
+        double:
+          action: sequence
+          steps:
+            - { keys: [ctrl, k] }
+            - { delay: 40 }
+            - { keys: [s] }
+      k2: { action: hotkey, keys: [ctrl, shift, p] }
+      k3:
+        tap: { action: hotkey, keys: [ctrl, grave] }
+        double: { action: layer, mode: oneshot, name: nav }
+        hold: { action: layer, mode: momentary, name: nav }
+      knob_ccw: { action: wheel, delta: -1 }
+      knob_cw:  { action: wheel, delta: 1 }
+      knob_press:
+        tap: { action: hotkey, keys: [ctrl, shift, b] }
+        double: { action: layer, mode: next }
+        hold: { action: peek }
+
+  debug:
+    label: Debug
+    color: "#f87171"
+    bindings:
+      k1: { action: hotkey, keys: [f10] }
+      k2: { action: hotkey, keys: [f5] }
+      k3: { action: hotkey, keys: [f9] }
+      knob_ccw: { action: wheel, delta: -1 }
+      knob_cw:  { action: wheel, delta: 1 }
+      knob_press:
+        tap: { action: hotkey, keys: [shift, f5] }
+        double: { action: layer, mode: next }
+        hold: { action: peek }
+
+  build:
+    label: Build
+    color: "#a3e635"
+    bindings:
+      k1: { action: hotkey, keys: [ctrl, shift, b] }
+      k2: { action: hotkey, keys: [ctrl, shift, p] }
+      k3: { action: hotkey, keys: [ctrl, grave] }
+      knob_ccw: { action: wheel, delta: -1 }
+      knob_cw:  { action: wheel, delta: 1 }
+      knob_press:
+        tap: { action: hotkey, keys: [ctrl, shift, b] }
+        double: { action: layer, mode: next }
+        hold: { action: peek }
+
+  chat:
+    label: Chat
+    color: "#c4b5fd"
+    bindings:
+      # PLACEHOLDERS: tell me what these should be.
+      k1: { action: hotkey, keys: [enter] }
+      k2: { action: hotkey, keys: [esc] }
+      k3: { action: hotkey, keys: [ctrl, c] }
+      knob_ccw: { action: wheel, delta: -3 }
+      knob_cw:  { action: wheel, delta: 3 }
+      knob_press:
+        tap: { action: hotkey, keys: [ctrl, l] }
+        double: { action: layer, mode: next }
+        hold: { action: peek }
+
+  playback:
+    label: Playback
+    color: "#f6ad55"
+    bindings:
+      k1: { action: hotkey, keys: [space] }
+      k2: { action: hotkey, keys: [right] }
+      k3: { action: hotkey, keys: [left] }
+      knob_ccw: { action: hotkey, keys: [left], repeat: true }
+      knob_cw:  { action: hotkey, keys: [right], repeat: true }
+      knob_press:
+        tap: { action: hotkey, keys: [m] }
+        hold: { action: peek }
+
+  browse:
+    label: Browse
+    color: "#90cdf4"
+    bindings:
+      k1: { action: hotkey, keys: [shift, tab] }
+      k2: { action: hotkey, keys: [f12] }
+      k3: { action: hotkey, keys: [esc] }
+      knob_ccw: { action: wheel, delta: -1 }
+      knob_cw:  { action: wheel, delta: 1 }
+      knob_press: { action: hotkey, keys: [enter] }
+
+rules:
+  - match: { process: Code.exe }
+    context: vscode
+  - match: { process: Cursor.exe }
+    context: vscode
+  - match: { process: vlc.exe }
+    context: vlc
+  - match: { process: steamwebhelper.exe }
+    context: steam
+  # opencode is a TUI: the foreground process is the terminal, so match the title.
+  - match: { title: '(?i)^OC \||.*opencode.*' }
+    context: opencode
+
+default_context: general

@@ -1,0 +1,26 @@
+# Single firmware layer for the 3-key + 1-knob pad.
+#
+# Every physical input emits a unique "phantom" key (F13-F18). They are real HID
+# usages that no physical keyboard produces, so a host-side listener can treat
+# each input as a unique event without modifiers.
+#
+# This file is the source of truth: the pad's configuration cannot be read back.
+#
+# Flash with:
+#   ch57x-keyboard-tool validate config/pad-single-layer.yaml
+#   ch57x-keyboard-tool upload   config/pad-single-layer.yaml
+
+model: ch57x-2
+orientation: normal      # buttons on the left, knob on the right
+rows: 1
+columns: 3
+knobs: 1
+
+layers:
+  - buttons:
+      # left -> right
+      - ["f13", "f14", "f15"]
+    knobs:
+      - ccw: "f17"
+        press: "f16"
+        cw: "f18"

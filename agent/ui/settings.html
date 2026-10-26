@@ -1,0 +1,1799 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>macrokey settings</title>
+<style>
+  :root {
+    --bg: #0e0f13;
+    --panel: #15171d;
+    --panel-2: #191c23;
+    --line: #262a34;
+    --line-2: #313743;
+    --fg: #e8eaf0;
+    --dim: #9aa3b2;
+    --accent: #7dd3fc;
+    --good: #a3e635;
+    --bad: #f87171;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  .mono { font-family: "Cascadia Code", "Consolas", monospace; }
+
+  header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+    background: var(--panel); flex: none;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; white-space: nowrap; }
+  .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .path { color: var(--dim); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 40px; }
+  .status {
+    font-size: 10px; letter-spacing: .8px; text-transform: uppercase; color: var(--dim);
+    border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px;
+    white-space: nowrap; cursor: default;
+  }
+  .status.busy { color: var(--accent); border-color: rgba(125,211,252,.4); }
+  .status.err { color: var(--bad); border-color: rgba(248,113,113,.45); cursor: pointer; }
+  .primary { background: var(--accent); color: #08141c; border: 0; border-radius: 8px; padding: 7px 13px; font-weight: 700; }
+  .primary:disabled { opacity: .45; cursor: default; }
+  .ghost { background: transparent; border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 10px; color: var(--fg); white-space: nowrap; }
+  .ghost:hover { background: var(--panel-2); }
+  .ghost:disabled { opacity: .4; cursor: default; }
+  .danger { color: var(--bad); border-color: rgba(248,113,113,.35); }
+  .small { font-size: 11.5px; padding: 5px 9px; }
+
+  main { display: flex; flex: 1; min-height: 0; }
+  aside {
+    width: 290px; flex: none; border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; min-height: 0; background: #111319;
+  }
+  .panel { display: flex; flex-direction: column; min-height: 0; }
+  .panel + .panel { border-top: 1px solid var(--line); }
+  .panel.grow { flex: 1; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 13px 7px; }
+  .panel-head h2 { margin: 0; font-size: 10px; letter-spacing: 1.1px; text-transform: uppercase; color: var(--dim); }
+  .panel-head button { width: 24px; height: 24px; padding: 0; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); }
+  .scroll { overflow: auto; padding: 0 7px 9px; }
+  .side-hint { padding: 4px 13px 12px; color: var(--dim); font-size: 10.5px; line-height: 1.5; }
+  .side-hint b { color: #c7cedb; font-weight: 600; }
+
+  .ctx-item {
+    display: flex; align-items: center; gap: 8px; padding: 7px 8px;
+    border-radius: 8px; cursor: pointer; border: 1px solid transparent;
+  }
+  .ctx-item:hover { background: var(--panel-2); }
+  .ctx-item.active { background: var(--panel-2); border-color: var(--line-2); }
+  .swatch { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .ctx-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ctx-item .meta { color: var(--dim); font-size: 10px; white-space: nowrap; }
+  .star { border: 0; background: transparent; color: var(--dim); padding: 2px 3px; border-radius: 5px; }
+  .star.on { color: var(--accent); }
+  .star:hover { background: #1f232c; }
+
+  .rule { border: 1px solid var(--line); border-radius: 9px; padding: 8px; margin: 0 4px 6px; background: var(--panel); }
+  .rule .top { display: flex; gap: 6px; align-items: center; }
+  .rule input, .rule select {
+    min-width: 0; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 7px; font-size: 11.5px;
+  }
+  .rule input { flex: 1; }
+  .rule select { width: 104px; }
+  .rule .del { border: 0; background: transparent; color: var(--dim); padding: 2px 4px; }
+  .rule .del.arm { color: var(--bad); }
+  .rule .label { font-size: 9px; color: var(--dim); letter-spacing: .8px; text-transform: uppercase; margin: 6px 0 2px; }
+
+  .content { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 15px 18px; gap: 11px; overflow: auto; }
+
+  .ctx-bar { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+  .eyebrow { font-size: 9px; letter-spacing: 1.1px; text-transform: uppercase; color: var(--dim); margin-bottom: 4px; }
+  .title-input { background: transparent; border: 0; border-bottom: 1px solid var(--line); font-size: 21px; font-weight: 700; padding: 2px 0 4px; width: 280px; }
+  .title-input:focus { outline: none; border-color: var(--accent); }
+  input[type="color"] { width: 36px; height: 30px; padding: 2px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; }
+  .ctx-bar .right { margin-left: auto; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .pill { font-size: 10.5px; color: var(--dim); border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px; }
+
+  .matches { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding-bottom: 4px; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 11px 5px; }
+  .section-head h3 { margin: 0; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+  .section-head > div { display: flex; gap: 6px; }
+  .matches-empty { padding: 2px 10px 7px; color: var(--dim); font-size: 11px; }
+
+  .matches-strip {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+  }
+  .matches-label {
+    flex: none;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .matches-summary {
+    flex: 1;
+    min-width: 0;
+    font-size: 11.5px;
+    color: #cfd6e4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .matches-actions {
+    display: flex;
+    gap: 6px;
+    padding-bottom: 2px;
+  }
+  #ruleList { display: flex; flex-direction: column; gap: 2px; }
+
+  .tabs { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; padding: 4px 0 2px; }
+  .tab {
+    display: flex; align-items: center; gap: 7px; padding: 6px 11px;
+    border-radius: 8px; border: 1px solid var(--line); background: var(--panel);
+    color: var(--dim); font-size: 12px;
+  }
+  .tab:hover { background: var(--panel-2); color: var(--fg); }
+  .tab.active { background: var(--panel-2); border-color: var(--line-2); color: var(--fg); font-weight: 600; }
+  .tab .swatch { width: 7px; height: 7px; }
+  .tab .star { padding: 0; font-size: 10px; }
+  .tab.add { border-style: dashed; color: var(--dim); }
+
+  .layer-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .layer-bar .title-input { font-size: 17px; width: 240px; }
+  .layer-bar .right { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+  .used { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 10.5px; color: var(--dim); }
+  .used label { display: flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; cursor: pointer; }
+  .used input { accent-color: var(--accent); }
+
+  .matrix-wrap { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--panel); }
+  table.matrix { width: 100%; border-collapse: collapse; }
+  table.matrix th {
+    text-align: left; font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--dim); font-weight: 600; padding: 9px 11px; border-bottom: 1px solid var(--line); background: #12141a;
+  }
+  table.matrix td { padding: 7px 9px; border-bottom: 1px solid #1d2029; vertical-align: middle; }
+  table.matrix tr:last-child td { border-bottom: 0; }
+  .input-cell { display: flex; align-items: center; gap: 8px; }
+  .input-cell .glyph { width: 25px; height: 25px; border-radius: 7px; background: var(--panel-2); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--dim); flex: none; }
+  .input-cell .txt { display: flex; flex-direction: column; gap: 1px; }
+  .input-cell .txt b { font-size: 11.5px; font-weight: 600; }
+  .input-cell .txt span { font-size: 9.5px; color: var(--dim); }
+  .cell {
+    width: 100%; text-align: left; min-height: 36px; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px;
+    color: var(--fg); font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .cell:hover { border-color: var(--line-2); background: #1d212a; }
+  .cell.empty { color: #5d6676; }
+  .cell .chev { color: #4e5766; font-size: 12px; }
+  .hint { color: var(--dim); font-size: 11px; line-height: 1.55; }
+  .hint b { color: #c7cedb; font-weight: 600; }
+
+  /* physical pad deck */
+  .board {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 2fr);
+    gap: 10px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background:
+      radial-gradient(120% 90% at 16% 0%, color-mix(in srgb, var(--layer, #7dd3fc) 14%, transparent), transparent 62%),
+      linear-gradient(160deg, #191c24 0%, #111319 60%, #0d0f14 100%);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+  }
+
+  .board::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 14px 14px;
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent 82%);
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent 82%);
+  }
+
+  .padcol {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .gestures {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .knobdeck {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sidecard {
+    height: 86px;
+    padding: 6px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    color: var(--fg);
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .sidecard:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: color-mix(in srgb, var(--layer) 45%, transparent);
+  }
+  .sideglyph {
+    font-size: 17px;
+    line-height: 1;
+    color: var(--layer);
+  }
+  .sidelabel {
+    max-width: 100%;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: #cfd6e4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sidecard.empty .sideglyph { color: #5d6676; }
+  .sidecard.empty .sidelabel { color: #5d6676; }
+
+  .pressrows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .cap {
+    position: relative;
+    width: 100%;
+    height: 86px;
+    padding: 11px 10px 9px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #262b37 0%, #191c25 62%, #14171e 100%);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow:
+      0 5px 0 #0a0c10,
+      0 10px 20px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: flex-end;
+    text-align: left;
+    color: var(--fg);
+    transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .cap:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--layer) 55%, transparent);
+    box-shadow:
+      0 7px 0 #0a0c10,
+      0 0 26px -6px var(--layer),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  }
+  .cap:active {
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 #0a0c10, 0 0 24px -4px var(--layer);
+  }
+  .capnum {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    font-family: "Cascadia Code", Consolas, monospace;
+    font-size: 9px;
+    font-weight: 700;
+    color: #6c7789;
+  }
+  .caplabel {
+    width: 100%;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .knobcap {
+    position: relative;
+    width: 86px;
+    height: 86px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fg);
+    transition: border-color 120ms ease, background 120ms ease;
+  }
+  .knobcap:hover {
+    border-color: color-mix(in srgb, var(--layer) 50%, transparent);
+    background: rgba(255, 255, 255, 0.035);
+  }
+  .knob {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 34% 28%, #3b4252 0%, #222734 45%, #14171e 75%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+      0 7px 16px rgba(0, 0, 0, 0.55),
+      inset 0 1px 1px rgba(255, 255, 255, 0.16),
+      inset 0 -4px 8px rgba(0, 0, 0, 0.35);
+  }
+  .knob::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 6px;
+    width: 3px;
+    height: 13px;
+    border-radius: 2px;
+    background: var(--layer);
+    box-shadow: 0 0 9px var(--layer);
+    transform: translateX(-50%);
+  }
+  .knobtitle {
+    position: absolute;
+    bottom: 5px;
+    font-size: 7.5px;
+    letter-spacing: 1.3px;
+    color: #6f7a8c;
+  }
+
+  .gesture {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    height: 36px;
+    padding: 0 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: #dfe4ee;
+    font-size: 11px;
+    text-align: left;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .gesture:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: color-mix(in srgb, var(--layer) 45%, transparent);
+  }
+  .gesture.empty { color: #5d6676; }
+  .gchip {
+    flex: none;
+    min-width: 34px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #8f99ab;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .gesture:not(.empty) .gchip {
+    color: var(--layer);
+    background: color-mix(in srgb, var(--layer) 13%, transparent);
+  }
+  .glabel {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .gesture .chev { flex: none; color: #4e5766; }
+
+  .modal { position: fixed; inset: 0; background: rgba(4,6,9,.62); display: flex; align-items: center; justify-content: center; z-index: 50; }
+  .modal.hidden { display: none; }
+  .sheet { width: 570px; max-height: 86vh; background: #14161c; border: 1px solid var(--line-2); border-radius: 16px; box-shadow: 0 24px 70px rgba(0,0,0,.55); display: flex; flex-direction: column; }
+  .sheet.wide { width: 620px; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 17px 9px; }
+  .sheet-head h3 { margin: 0; font-size: 16px; }
+  .icon { border: 0; background: transparent; color: var(--dim); font-size: 15px; padding: 4px 7px; border-radius: 6px; }
+  .icon:hover { background: var(--panel-2); }
+  .sheet-body { padding: 4px 17px 8px; overflow: auto; display: flex; flex-direction: column; gap: 11px; }
+  .sheet-foot { display: flex; align-items: center; gap: 8px; padding: 11px 17px 15px; border-top: 1px solid var(--line); margin-top: 6px; }
+  .sheet-foot .spacer { flex: 1; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field > span { font-size: 9.5px; letter-spacing: .9px; text-transform: uppercase; color: var(--dim); }
+  .field input[type="text"], .field input[type="number"], .field select, .field textarea {
+    background: var(--bg); border: 1px solid var(--line-2); border-radius: 8px; padding: 8px 10px; width: 100%;
+  }
+  .field textarea { min-height: 62px; resize: vertical; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+  .rowline { display: flex; gap: 8px; align-items: center; }
+  .rowline > * { min-width: 0; }
+  .grow1 { flex: 1; }
+  .record-row { display: flex; gap: 8px; align-items: center; }
+  .record-row .keys { flex: 1; min-height: 34px; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
+  .keycap { background: #1e222b; border: 1px solid var(--line-2); border-radius: 5px; padding: 2px 7px; font-size: 11px; font-family: "Cascadia Code", Consolas, monospace; }
+  .recording { color: var(--accent); font-size: 11px; }
+  .note { font-size: 10.5px; color: var(--dim); line-height: 1.5; }
+  .steps { display: flex; flex-direction: column; gap: 6px; }
+  .step { display: flex; gap: 6px; align-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 5px; }
+  .step select { width: 88px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px; }
+  .step input { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; }
+  .step .del { border: 0; background: transparent; color: var(--dim); }
+  .step .del:hover { color: var(--bad); }
+
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+  .settings-grid .full { grid-column: 1 / -1; }
+  .toggle { display: flex; align-items: center; gap: 8px; }
+  .toggle input { accent-color: var(--accent); }
+  .readonly { display: grid; grid-template-columns: 90px 1fr; gap: 4px 10px; font-size: 11.5px; color: var(--dim); }
+  .readonly b { color: var(--fg); font-weight: 500; }
+
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: #1b2029; border: 1px solid var(--line-2); color: var(--fg); padding: 10px 16px; border-radius: 10px; opacity: 0; transition: all .18s ease; max-width: 70vw; box-shadow: 0 12px 40px rgba(0,0,0,.45); white-space: pre-wrap; z-index: 80; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.bad { border-color: rgba(248,113,113,.5); color: #fecaca; }
+  .toast.good { border-color: rgba(163,230,53,.4); }
+  .empty-state { padding: 40px; color: var(--dim); text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span> macrokey</div>
+  <div class="path" id="path">loading…</div>
+  <span class="status" id="status">Saved</span>
+  <button class="ghost small" id="reloadBtn" title="Reload from the database">↻</button>
+  <button class="ghost small" id="exportBtn">Export</button>
+  <button class="ghost small" id="folderBtn">Folder</button>
+  <button class="ghost small" id="settingsBtn">Settings</button>
+</header>
+
+<main>
+  <aside>
+    <div class="panel grow">
+      <div class="panel-head"><h2>Contexts</h2><button id="addContext" title="New context">+</button></div>
+      <div class="scroll" id="ctxList"></div>
+      <div class="side-hint">
+        A context owns its <b>app rules</b> and its <b>layers</b>. <b>General</b> is the
+        fallback when no rule matches.
+      </div>
+    </div>
+  </aside>
+
+  <section class="content" id="content">
+    <div class="ctx-bar">
+      <div>
+        <div class="eyebrow">Context</div>
+        <input class="title-input" id="ctxLabel" />
+      </div>
+      <div class="right">
+        <span class="pill mono" id="ctxId"></span>
+        <button class="ghost small" id="makeDefaultCtx">Make default</button>
+        <button class="ghost small danger" id="deleteCtx">Delete context</button>
+      </div>
+    </div>
+
+    <div class="matches-strip">
+      <span class="matches-label">Matches</span>
+      <span class="matches-summary" id="matchesSummary">No rules</span>
+      <span class="pill" id="matchesCount">0</span>
+      <button class="ghost small" id="editMatches">Edit matches…</button>
+    </div>
+
+    <div class="tabs" id="tabBar"></div>
+
+    <div class="layer-bar">
+      <div>
+        <div class="eyebrow">Layer</div>
+        <input class="title-input" id="layerLabel" />
+      </div>
+      <input type="color" id="layerColor" title="Layer colour" />
+      <div class="right">
+        <span class="pill mono" id="layerId"></span>
+        <button class="ghost small" id="moveLeft" title="Move layer earlier in this context">‹</button>
+        <button class="ghost small" id="moveRight" title="Move layer later in this context">›</button>
+        <button class="ghost small" id="makeDefaultLayer">Default layer</button>
+        <button class="ghost small danger" id="removeLayer">Remove from context</button>
+      </div>
+    </div>
+
+    <div class="used" id="usedIn"></div>
+
+    <div class="board" id="board"></div>
+
+    <div class="hint">
+      Click a keycap or a gesture card. <b>Tap</b> = quick press · <b>2×</b> = double ·
+      <b>Hold</b> = keep pressed. Focus picks the <b>context</b>; layer actions switch,
+      stay while held, or apply to the next key.
+    </div>
+  </section>
+</main>
+
+<div class="modal hidden" id="actionModal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div><div class="eyebrow" id="modalWhere"></div><h3 id="modalTitle">Action</h3></div>
+      <button class="icon" id="modalClose">✕</button>
+    </div>
+    <div class="sheet-body">
+      <label class="field"><span>Action type</span><select id="actionType"></select></label>
+      <div id="actionFields"></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="ghost danger small" id="clearAction">Clear</button>
+      <div class="spacer"></div>
+      <button class="ghost" id="cancelAction">Cancel</button>
+      <button class="primary" id="applyAction">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="matchesModal">
+  <div class="sheet wide">
+    <div class="sheet-head">
+      <div><div class="eyebrow" id="matchesWhere">Context</div><h3>Matches</h3></div>
+      <button class="icon" id="matchesClose">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="matches-actions">
+        <button class="ghost small" id="addRule">+ Add rule</button>
+        <button class="ghost small" id="useCurrent">Use current app</button>
+      </div>
+      <div id="ruleList"></div>
+      <div class="note">
+        Process matches the executable name; window title is a regex. Both may be set.
+        First match wins; <b>General</b> is the fallback.
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <div class="spacer"></div>
+      <button class="primary" id="matchesDone">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="settingsModal">
+  <div class="sheet wide">
+    <div class="sheet-head"><div><div class="eyebrow">Agent</div><h3>Settings</h3></div><button class="icon" id="settingsClose">✕</button></div>
+    <div class="sheet-body">
+      <div class="settings-grid">
+        <label class="toggle"><input type="checkbox" id="osdEnabled" /> On-screen legend</label>
+        <label class="toggle"><input type="checkbox" id="osdFocus" /> Show on context change</label>
+        <label class="toggle"><input type="checkbox" id="osdPress" /> Show on every press</label>
+        <label class="field"><span>Legend duration (ms)</span><input type="number" id="osdDuration" min="300" step="100" /></label>
+        <label class="field"><span>Legend monitor</span>
+          <select id="osdMonitor">
+            <option value="focused">Focused window</option>
+            <option value="primary">Primary monitor</option>
+          </select>
+        </label>
+        <label class="field"><span>Double-tap window (ms)</span><input type="number" id="doubleTap" min="120" step="10" /></label>
+        <label class="field"><span>Hold threshold (ms)</span><input type="number" id="holdMs" min="200" step="10" /></label>
+        <label class="toggle"><input type="checkbox" id="knobAccel" /> Knob acceleration</label>
+        <label class="field"><span>Knob window (ms)</span><input type="number" id="knobWindow" min="30" step="10" /></label>
+        <label class="field full"><span>Knob multipliers (slow → fast)</span><input type="text" id="knobMult" placeholder="1, 1, 2, 4, 8" /></label>
+        <div class="full">
+          <div class="eyebrow">Pad mapping</div>
+          <div class="readonly" id="padReadonly"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button class="ghost small" id="previewOsd">Preview legend</button>
+      <button class="ghost danger small" id="resetBtn">Reset to factory defaults</button>
+      <div class="spacer"></div>
+      <button class="primary" id="settingsDone">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const INPUTS = [
+    { key: "k1", label: "Key 1", hint: "left", glyph: "1" },
+    { key: "k2", label: "Key 2", hint: "middle", glyph: "2" },
+    { key: "k3", label: "Key 3", hint: "right", glyph: "3" },
+    { key: "knob_ccw", label: "Knob left", hint: "rotate", glyph: "↺" },
+    { key: "knob_press", label: "Knob press", hint: "push", glyph: "⏺" },
+    { key: "knob_cw", label: "Knob right", hint: "rotate", glyph: "↻" },
+  ];
+  const GESTURES = [
+    { key: "tap", label: "Tap" },
+    { key: "double", label: "Double" },
+    { key: "hold", label: "Hold" },
+  ];
+  const ACTION_TYPES = [
+    ["hotkey", "Key / chord"],
+    ["sequence", "Key sequence"],
+    ["text", "Type text"],
+    ["media", "Media key"],
+    ["wheel", "Scroll / wheel"],
+    ["layer", "Layer action"],
+    ["peek", "Peek legend"],
+    ["launch", "Open app or file"],
+    ["url", "Open URL"],
+    ["script", "Run command"],
+    ["window", "Window action"],
+    ["none", "Do nothing"],
+  ];
+  const MEDIA = ["play", "next", "previous", "stop", "mute", "volumeup", "volumedown"];
+  const PALETTE = ["#7dd3fc", "#a3e635", "#f472b6", "#f6ad55", "#c4b5fd", "#63b3ed", "#fbbf24", "#f87171"];
+  const PRETTY = {
+    ctrl: "Ctrl", rctrl: "RCtrl", shift: "Shift", rshift: "RShift",
+    alt: "Alt", ralt: "RAlt", opt: "Alt", win: "Win", cmd: "Win",
+    enter: "Enter", esc: "Esc", space: "Space", tab: "Tab", grave: "`",
+    left: "←", right: "→", up: "↑", down: "↓",
+    volumeup: "Vol +", volumedown: "Vol −", volume_up: "Vol +", volume_down: "Vol −",
+    play: "Play/Pause", play_pause: "Play/Pause",
+    previous: "Previous", next: "Next", mute: "Mute", stop: "Stop",
+    backspace: "Backspace", pageup: "PageUp", pagedown: "PageDown",
+    home: "Home", end: "End", insert: "Insert", delete: "Delete",
+    minus: "−", equal: "=", leftbracket: "[", rightbracket: "]",
+    backslash: "\\", semicolon: ";", quote: "'", comma: ",", dot: ".", slash: "/",
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const invoke = (cmd, args) => window.__TAURI__.core.invoke(cmd, args);
+
+  let doc = null;              // { path, revision, value }
+  let selectedContext = null;
+  let selectedLayer = null;
+  let editing = null;          // { input, gesture }
+  let draft = null;
+  let recording = false;
+  let saveTimer = null;
+  let saveSeq = 0;
+  let resetArmed = false;
+
+  const value = () => doc.value;
+  const context = () => value().contexts[selectedContext];
+  const layer = () => value().layers[selectedLayer];
+
+  // ---------------------------------------------------------------- load / save
+
+  async function init() {
+    try {
+      doc = await invoke("load_config");
+    } catch (error) {
+      $("path").textContent = "Database error";
+      $("content").innerHTML = `<div class="empty-state"><h3>Could not load the database</h3><p>${escapeHtml(String(error))}</p></div>`;
+      return;
+    }
+    $("path").textContent = doc.path;
+    $("path").title = doc.path;
+    clampSelection();
+    renderAll();
+    setStatus("Saved");
+  }
+
+  function clampSelection() {
+    const contexts = value().contexts || {};
+    const ids = Object.keys(contexts);
+    if (!selectedContext || !contexts[selectedContext]) {
+      selectedContext = value().default_context && contexts[value().default_context]
+        ? value().default_context
+        : ids[0];
+    }
+    const ctx = contexts[selectedContext];
+    if (!ctx) return;
+    if (!selectedLayer || !ctx.layers.includes(selectedLayer)) {
+      selectedLayer = ctx.default_layer && ctx.layers.includes(ctx.default_layer)
+        ? ctx.default_layer
+        : ctx.layers[0];
+    }
+    if (!selectedLayer || !value().layers[selectedLayer]) {
+      selectedLayer = Object.keys(value().layers)[0];
+    }
+  }
+
+  function setStatus(text, kind = "") {
+    const node = $("status");
+    node.textContent = text;
+    node.className = "status" + (kind ? " " + kind : "");
+  }
+
+  function touch() {
+    setStatus("Saving…", "busy");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveState, 350);
+  }
+
+  function hasIncompleteRule() {
+    return (value().rules || []).some((rule) => {
+      const match = rule.match || {};
+      return !(match.process || "").trim()
+        && !(match.title || "").trim()
+        && !(match.class || "").trim();
+    });
+  }
+
+  async function saveState() {
+    if (!doc) return;
+    if (hasIncompleteRule()) {
+      setStatus("Fill rule", "busy");
+      return;
+    }
+    const seq = ++saveSeq;
+    setStatus("Saving…", "busy");
+    try {
+      const result = await invoke("save_config", { value: value() });
+      if (seq !== saveSeq) return;
+      doc.revision = result.revision;
+      setStatus("Saved");
+    } catch (error) {
+      setStatus("Error", "err");
+      toast(String(error), true);
+    }
+  }
+
+  async function reloadState() {
+    try {
+      doc = await invoke("load_config");
+      $("path").textContent = doc.path;
+      clampSelection();
+      renderAll();
+      setStatus("Reloaded");
+      setTimeout(() => setStatus("Saved"), 1200);
+    } catch (error) {
+      toast(String(error), true);
+    }
+  }
+
+  function renderAll() {
+    renderContexts();
+    renderMatches();
+    renderEditor();
+  }
+
+  // ---------------------------------------------------------------- contexts
+
+  function renderContexts() {
+    const list = $("ctxList");
+    list.innerHTML = "";
+    for (const [id, ctx] of Object.entries(value().contexts)) {
+      const isDefault = value().default_context === id ||
+        (!value().default_context && id === Object.keys(value().contexts)[0]);
+      const color = value().layers[ctx.default_layer]?.color || "#7dd3fc";
+      const ruleCount = (value().rules || []).filter((rule) => rule.context === id).length;
+      const item = document.createElement("div");
+      item.className = "ctx-item" + (id === selectedContext ? " active" : "");
+      item.innerHTML = `
+        <span class="swatch" style="background:${color}"></span>
+        <span class="name">${escapeHtml(ctx.label || id)}</span>
+        <span class="meta" title="${ctx.layers.length} layers, ${ruleCount} rules">${ctx.layers.length}L${ruleCount ? ` · ${ruleCount}R` : ""}</span>
+        <button class="star ${isDefault ? "on" : ""}" title="Default context">${isDefault ? "★" : "☆"}</button>
+      `;
+      item.addEventListener("click", (event) => {
+        if (event.target.classList.contains("star")) {
+          value().default_context = id;
+          touch();
+          renderContexts();
+          return;
+        }
+        selectedContext = id;
+        selectedLayer = value().contexts[id].default_layer || value().contexts[id].layers[0];
+        renderAll();
+      });
+      list.appendChild(item);
+    }
+  }
+
+  function addContext() {
+    const id = nextId("context");
+    const layerId = nextId("layer");
+    const n = Object.keys(value().contexts).length + 1;
+    const layerN = Object.keys(value().layers).length + 1;
+    value().layers[layerId] = {
+      label: `Layer ${layerN}`,
+      color: PALETTE[n % PALETTE.length],
+      bindings: {},
+    };
+    value().contexts[id] = {
+      label: `Context ${n}`,
+      default_layer: layerId,
+      layers: [layerId],
+    };
+    selectedContext = id;
+    selectedLayer = layerId;
+    touch();
+    renderAll();
+  }
+
+  async function deleteContext() {
+    const id = selectedContext;
+    const ids = Object.keys(value().contexts);
+    if (ids.length <= 1) {
+      toast("At least one context is required.", true);
+      return;
+    }
+    if (!confirmArm($("deleteCtx"), `Delete "${context().label || id}"?`)) return;
+
+    const removedRules = value().rules.filter((rule) => rule.context === id).length;
+    value().rules = value().rules.filter((rule) => rule.context !== id);
+    delete value().contexts[id];
+    if (value().default_context === id) {
+      value().default_context = Object.keys(value().contexts)[0];
+    }
+    selectedContext = Object.keys(value().contexts)[0];
+    selectedLayer = value().contexts[selectedContext].default_layer;
+    touch();
+    renderAll();
+    toast(`Context deleted${removedRules ? ` (${removedRules} rule${removedRules === 1 ? "" : "s"} removed)` : ""}.`);
+  }
+
+  // ---------------------------------------------------------------- layers
+
+  function renderTabs() {
+    const bar = $("tabBar");
+    bar.innerHTML = "";
+    const ctx = context();
+    ctx.layers.forEach((id) => {
+      const entry = value().layers[id];
+      if (!entry) return;
+      const isDefault = ctx.default_layer === id;
+      const tab = document.createElement("button");
+      tab.className = "tab" + (id === selectedLayer ? " active" : "");
+      tab.innerHTML = `
+        <span class="swatch" style="background:${entry.color || "#7dd3fc"}"></span>
+        <span>${escapeHtml(entry.label || id)}</span>
+        ${isDefault ? `<span class="star on" title="Default layer">★</span>` : ""}
+      `;
+      tab.addEventListener("click", () => {
+        selectedLayer = id;
+        renderEditor();
+      });
+      bar.appendChild(tab);
+    });
+
+    const unused = Object.keys(value().layers).filter((id) => !ctx.layers.includes(id));
+    if (unused.length) {
+      const add = document.createElement("select");
+      add.className = "tab add";
+      add.style.background = "transparent";
+      add.innerHTML = `<option value="">+ add existing layer…</option>` +
+        unused.map((id) => `<option value="${escapeAttr(id)}">${escapeHtml(value().layers[id].label || id)}</option>`).join("");
+      add.addEventListener("change", () => {
+        if (!add.value) return;
+        ctx.layers.push(add.value);
+        selectedLayer = add.value;
+        touch();
+        renderEditor();
+      });
+      bar.appendChild(add);
+    }
+
+    const create = document.createElement("button");
+    create.className = "tab add";
+    create.textContent = "+ new layer";
+    create.addEventListener("click", addLayerToContext);
+    bar.appendChild(create);
+  }
+
+  function addLayerToContext() {
+    const id = nextId("layer");
+    const n = Object.keys(value().layers).length + 1;
+    value().layers[id] = {
+      label: `Layer ${n}`,
+      color: PALETTE[n % PALETTE.length],
+      bindings: {},
+    };
+    context().layers.push(id);
+    selectedLayer = id;
+    touch();
+    renderEditor();
+  }
+
+  function removeLayerFromContext() {
+    const ctx = context();
+    if (ctx.layers.length <= 1) {
+      toast("A context needs at least one layer.", true);
+      return;
+    }
+    if (!confirmArm($("removeLayer"), "Click again to remove")) return;
+    if (referencesLayer(selectedContext, selectedLayer)) {
+      toast("This layer is still used by a Layer action in this context. Change those bindings first.", true);
+      return;
+    }
+    ctx.layers = ctx.layers.filter((id) => id !== selectedLayer);
+    if (ctx.default_layer === selectedLayer) {
+      ctx.default_layer = ctx.layers[0];
+    }
+    selectedLayer = ctx.default_layer;
+    touch();
+    renderEditor();
+  }
+
+  function referencesLayer(contextId, layerId) {
+    const ctx = value().contexts[contextId];
+    for (const id of ctx.layers) {
+      const bindings = value().layers[id]?.bindings || {};
+      for (const binding of Object.values(bindings)) {
+        const gestures = binding.action ? [binding] : [binding.tap, binding.double, binding.hold];
+        for (const action of gestures) {
+          if (action && action.action === "layer" && action.name === layerId) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function moveLayer(step) {
+    const ctx = context();
+    const index = ctx.layers.indexOf(selectedLayer);
+    const target = index + step;
+    if (index < 0 || target < 0 || target >= ctx.layers.length) return;
+    [ctx.layers[index], ctx.layers[target]] = [ctx.layers[target], ctx.layers[index]];
+    touch();
+    renderTabs();
+  }
+
+  function setDefaultLayer() {
+    context().default_layer = selectedLayer;
+    touch();
+    renderTabs();
+    renderEditor();
+  }
+
+  // ---------------------------------------------------------------- editor
+
+  function renderEditor() {
+    const ctx = context();
+    if (!ctx) return;
+    const entry = layer();
+    if (!entry) return;
+
+    $("deleteCtx").classList.remove("arm");
+    $("deleteCtx").textContent = "Delete context";
+    $("removeLayer").classList.remove("arm");
+    $("removeLayer").textContent = "Remove from context";
+
+    $("ctxLabel").value = ctx.label || "";
+    $("ctxId").textContent = selectedContext;
+    const isDefaultCtx = value().default_context === selectedContext ||
+      (!value().default_context && selectedContext === Object.keys(value().contexts)[0]);
+    $("makeDefaultCtx").disabled = isDefaultCtx;
+    $("makeDefaultCtx").textContent = isDefaultCtx ? "Default" : "Make default";
+
+    $("layerLabel").value = entry.label || "";
+    $("layerColor").value = entry.color || "#7dd3fc";
+    $("layerId").textContent = selectedLayer;
+    const isDefault = ctx.default_layer === selectedLayer;
+    $("makeDefaultLayer").disabled = isDefault;
+    $("makeDefaultLayer").textContent = isDefault ? "Default" : "Default layer";
+    $("removeLayer").disabled = ctx.layers.length <= 1;
+    $("moveLeft").disabled = ctx.layers.indexOf(selectedLayer) <= 0;
+    $("moveRight").disabled = ctx.layers.indexOf(selectedLayer) >= ctx.layers.length - 1;
+
+    renderTabs();
+    renderUsedIn();
+    renderMatrix(entry);
+  }
+
+  function renderUsedIn() {
+    const host = $("usedIn");
+    host.innerHTML = `<span>Used in:</span>`;
+    for (const [id, ctx] of Object.entries(value().contexts)) {
+      const present = ctx.layers.includes(selectedLayer);
+      const label = document.createElement("label");
+      label.innerHTML = `<input type="checkbox" ${present ? "checked" : ""}/> ${escapeHtml(ctx.label || id)}`;
+      const box = label.querySelector("input");
+      box.addEventListener("change", () => {
+        if (box.checked) {
+          if (!ctx.layers.includes(selectedLayer)) ctx.layers.push(selectedLayer);
+        } else {
+          if (ctx.layers.length <= 1) {
+            box.checked = true;
+            toast("A context needs at least one layer.", true);
+            return;
+          }
+          if (referencesLayer(id, selectedLayer)) {
+            box.checked = true;
+            toast(`"${value().layers[selectedLayer].label || selectedLayer}" is used by a Layer action in ${ctx.label || id}.`, true);
+            return;
+          }
+          ctx.layers = ctx.layers.filter((layerId) => layerId !== selectedLayer);
+          if (ctx.default_layer === selectedLayer) ctx.default_layer = ctx.layers[0];
+          if (id === selectedContext && !ctx.layers.includes(selectedLayer)) {
+            selectedLayer = ctx.default_layer || ctx.layers[0];
+          }
+        }
+        touch();
+        renderAll();
+      });
+      host.appendChild(label);
+    }
+  }
+
+  function keyCap(input, action) {
+    const cap = document.createElement("button");
+    cap.className = "cap";
+    cap.title = `${input.label} — tap action`;
+    cap.innerHTML = `
+      <span class="capnum">${input.glyph}</span>
+      <span class="caplabel">${escapeHtml(action ? summary(action) : "—")}</span>
+    `;
+    cap.addEventListener("click", () => openAction(input.key, "tap"));
+    return cap;
+  }
+
+  function gestureRow(inputKey, gestureKey, action, chip, emptyLabel) {
+    const row = document.createElement("button");
+    row.className = "gesture" + (action ? "" : " empty");
+    row.innerHTML = `
+      <span class="gchip">${chip}</span>
+      <span class="glabel">${escapeHtml(action ? summary(action) : emptyLabel)}</span>
+      <span class="chev">›</span>
+    `;
+    row.addEventListener("click", () => openAction(inputKey, gestureKey));
+    return row;
+  }
+
+  function renderMatrix(entry) {
+    const board = $("board");
+    board.innerHTML = "";
+    board.style.setProperty("--layer", entry.color || "#7dd3fc");
+
+    for (const input of INPUTS.filter((item) => ["k1", "k2", "k3"].includes(item.key))) {
+      const gestures = gesturesOf(entry.bindings && entry.bindings[input.key]);
+      const column = document.createElement("div");
+      column.className = "padcol";
+      column.appendChild(keyCap(input, gestures.tap));
+
+      const list = document.createElement("div");
+      list.className = "gestures";
+      list.appendChild(gestureRow(input.key, "tap", gestures.tap, "TAP", "Set tap"));
+      list.appendChild(gestureRow(input.key, "double", gestures.double, "2×", "Set double"));
+      list.appendChild(gestureRow(input.key, "hold", gestures.hold, "HOLD", "Set hold"));
+      column.appendChild(list);
+      board.appendChild(column);
+    }
+
+    const press = gesturesOf(entry.bindings && entry.bindings.knob_press);
+    const left = gesturesOf(entry.bindings && entry.bindings.knob_ccw);
+    const right = gesturesOf(entry.bindings && entry.bindings.knob_cw);
+
+    const knobColumn = document.createElement("div");
+    knobColumn.className = "padcol";
+
+    const knobDeck = document.createElement("div");
+    knobDeck.className = "knobdeck";
+
+    const leftCard = document.createElement("button");
+    leftCard.className = "sidecard" + (left.tap ? "" : " empty");
+    leftCard.title = "Knob left (CCW)";
+    leftCard.innerHTML = `<span class="sideglyph">↺</span><span class="sidelabel">${escapeHtml(left.tap ? summary(left.tap) : "Set CCW")}</span>`;
+    leftCard.addEventListener("click", () => openAction("knob_ccw", "tap"));
+
+    const knobCap = document.createElement("button");
+    knobCap.className = "knobcap";
+    knobCap.title = "Knob press — tap action";
+    knobCap.innerHTML = `<span class="knob"></span><span class="knobtitle">KNOB</span>`;
+    knobCap.addEventListener("click", () => openAction("knob_press", "tap"));
+
+    const rightCard = document.createElement("button");
+    rightCard.className = "sidecard" + (right.tap ? "" : " empty");
+    rightCard.title = "Knob right (CW)";
+    rightCard.innerHTML = `<span class="sideglyph">↻</span><span class="sidelabel">${escapeHtml(right.tap ? summary(right.tap) : "Set CW")}</span>`;
+    rightCard.addEventListener("click", () => openAction("knob_cw", "tap"));
+
+    knobDeck.append(leftCard, knobCap, rightCard);
+    knobColumn.appendChild(knobDeck);
+
+    const pressRows = document.createElement("div");
+    pressRows.className = "pressrows";
+    pressRows.appendChild(gestureRow("knob_press", "tap", press.tap, "TAP", "Set tap"));
+    pressRows.appendChild(gestureRow("knob_press", "double", press.double, "2×", "Set double"));
+    pressRows.appendChild(gestureRow("knob_press", "hold", press.hold, "HOLD", "Set hold"));
+    knobColumn.appendChild(pressRows);
+    board.appendChild(knobColumn);
+  }
+
+  // ---------------------------------------------------------------- rules
+
+  function renderMatchesSummary(entries, isDefault) {
+    const summary = $("matchesSummary");
+    const count = $("matchesCount");
+    if (!summary || !count) return;
+    const labels = entries.map(({ rule }) => {
+      const match = rule.match || {};
+      return match.process || match.title || match.class || "empty rule";
+    });
+    const text = labels.length
+      ? labels.slice(0, 3).join(" · ") + (labels.length > 3 ? ` · +${labels.length - 3}` : "")
+      : (isDefault ? "No rules — fallback context" : "No rules — never activates");
+    summary.textContent = text;
+    summary.title = labels.join("\n") || text;
+    count.textContent = String(labels.length);
+  }
+
+  function renderMatches() {
+    const list = $("ruleList");
+    list.innerHTML = "";
+    const entries = (value().rules || [])
+      .map((rule, index) => ({ rule, index }))
+      .filter(({ rule }) => rule.context === selectedContext);
+    const isDefault = value().default_context === selectedContext ||
+      (!value().default_context && selectedContext === Object.keys(value().contexts)[0]);
+
+    renderMatchesSummary(entries, isDefault);
+
+    if (!entries.length) {
+      list.innerHTML = `<div class="matches-empty">${isDefault
+        ? "No rules. This is the fallback context."
+        : "No rules yet. Without one, this context never activates."}</div>`;
+      return;
+    }
+
+    entries.forEach(({ rule, index }) => {
+      const match = rule.match || (rule.match = {});
+      const box = document.createElement("div");
+      box.className = "rule";
+      box.innerHTML = `
+        <div class="top">
+          <input placeholder="Process, e.g. Code.exe" value="${escapeAttr(match.process || "")}" />
+          <button class="del small" title="Delete rule">✕</button>
+        </div>
+        <div class="label">or window title regex</div>
+        <div class="top">
+          <input placeholder="e.g. ^OC \\|" value="${escapeAttr(match.title || "")}" />
+        </div>
+      `;
+      const [processInput, titleInput] = box.querySelectorAll("input");
+      const del = box.querySelector(".del");
+      processInput.addEventListener("input", () => {
+        setMatch(match, "process", processInput.value);
+        renderMatchesSummary(entries, isDefault);
+        touch();
+      });
+      titleInput.addEventListener("input", () => {
+        setMatch(match, "title", titleInput.value);
+        renderMatchesSummary(entries, isDefault);
+        touch();
+      });
+      del.addEventListener("click", () => {
+        if (del.classList.contains("arm")) {
+          value().rules.splice(index, 1);
+          touch();
+          renderMatches();
+          renderContexts();
+        } else {
+          del.classList.add("arm");
+          del.textContent = "Sure?";
+          setTimeout(() => { del.classList.remove("arm"); del.textContent = "✕"; }, 2200);
+        }
+      });
+      list.appendChild(box);
+    });
+  }
+
+  function openMatches() {
+    $("matchesWhere").textContent = `${context().label || selectedContext} · ${layer()?.label || selectedLayer}`;
+    renderMatches();
+    $("matchesModal").classList.remove("hidden");
+  }
+
+  function closeMatches() {
+    $("matchesModal").classList.add("hidden");
+  }
+
+  function setMatch(match, key, value) {
+    if (value.trim()) match[key] = value;
+    else delete match[key];
+  }
+
+  function addRule() {
+    value().rules = value().rules || [];
+    value().rules.push({ match: { process: "" }, context: selectedContext });
+    touch();
+    renderMatches();
+    renderContexts();
+  }
+
+  async function useCurrentApp() {
+    try {
+      const app = await invoke("current_app");
+      if (!app.exe) {
+        toast("Could not read the foreground app.", true);
+        return;
+      }
+      value().rules = value().rules || [];
+      value().rules.push({ match: { process: app.exe }, context: selectedContext });
+      touch();
+      renderMatches();
+      renderContexts();
+      toast(`Rule added: ${app.exe} → ${context().label || selectedContext}`);
+    } catch (error) {
+      toast(String(error), true);
+    }
+  }
+
+  // ---------------------------------------------------------------- action modal
+
+  function gesturesOf(binding) {
+    if (!binding) return {};
+    if (binding.action) return { tap: binding };
+    return { tap: binding.tap || null, double: binding.double || null, hold: binding.hold || null };
+  }
+
+  function setGesture(inputKey, gesture, action) {
+    const entry = layer();
+    entry.bindings = entry.bindings || {};
+    const gestures = gesturesOf(entry.bindings[inputKey]);
+    if (action) gestures[gesture] = action;
+    else delete gestures[gesture];
+    const present = Object.keys(gestures).filter((key) => gestures[key]);
+    if (!present.length) delete entry.bindings[inputKey];
+    else if (present.length === 1 && present[0] === "tap") entry.bindings[inputKey] = gestures.tap;
+    else entry.bindings[inputKey] = {
+      ...(gestures.tap ? { tap: gestures.tap } : {}),
+      ...(gestures.double ? { double: gestures.double } : {}),
+      ...(gestures.hold ? { hold: gestures.hold } : {}),
+    };
+    touch();
+    renderMatrix(entry);
+  }
+
+  function openAction(inputKey, gesture) {
+    editing = { input: inputKey, gesture };
+    const input = INPUTS.find((entry) => entry.key === inputKey);
+    const gestureLabel = GESTURES.find((entry) => entry.key === gesture).label;
+    $("modalWhere").textContent = `${context().label || selectedContext} · ${layer().label || selectedLayer} · ${input.label}`;
+    $("modalTitle").textContent = gestureLabel;
+    const current = gesturesOf((layer().bindings || {})[inputKey])[gesture];
+    draft = current ? clone(current) : defaultAction("layer");
+    $("actionType").value = draft.action;
+    renderActionFields();
+    $("actionModal").classList.remove("hidden");
+  }
+
+  function closeAction() {
+    recording = false;
+    editing = null;
+    draft = null;
+    $("actionModal").classList.add("hidden");
+  }
+
+  function defaultAction(type) {
+    switch (type) {
+      case "hotkey": return { action: "hotkey", keys: [] };
+      case "sequence": return { action: "sequence", steps: [{ keys: ["ctrl", "c"] }] };
+      case "media": return { action: "media", key: "play" };
+      case "wheel": return { action: "wheel", delta: -1, modifiers: [] };
+      case "text": return { action: "text", value: "" };
+      case "layer": return { action: "layer", mode: "switch", name: selectedLayer };
+      case "peek": return { action: "peek" };
+      case "launch": return { action: "launch", target: "" };
+      case "url": return { action: "url", target: "https://" };
+      case "script": return { action: "script", cmd: "" };
+      case "window": return { action: "window", do: "minimize" };
+      default: return { action: "none" };
+    }
+  }
+
+  function renderActionFields() {
+    const host = $("actionFields");
+    host.innerHTML = "";
+    if (!draft) return;
+
+    if (draft.action === "hotkey") {
+      host.innerHTML = `
+        <div class="field"><span>Chord</span>
+          <div class="record-row"><div class="keys" id="keysBox"></div><button class="ghost small" id="recordBtn">Record</button></div>
+          <div class="note">Click Record, then press the chord. Modifiers are captured automatically.</div>
+        </div>`;
+      renderKeysBox();
+      $("recordBtn").addEventListener("click", () => {
+        recording = true;
+        $("recordBtn").textContent = "Listening…";
+        $("recordBtn").classList.add("primary");
+      });
+    } else if (draft.action === "sequence") {
+      host.innerHTML = `
+        <div class="field"><span>Steps</span>
+          <div class="steps" id="stepsBox"></div>
+          <button class="ghost small" id="addStep" style="align-self:flex-start">+ Add step</button>
+          <div class="note">Steps run in order. A delay pauses between them.</div>
+        </div>`;
+      renderSteps();
+      $("addStep").addEventListener("click", () => { draft.steps.push({ keys: ["enter"] }); renderSteps(); });
+    } else if (draft.action === "text") {
+      host.innerHTML = `<label class="field"><span>Text to type</span><textarea id="textValue">${escapeHtml(draft.value || "")}</textarea></label>`;
+      $("textValue").addEventListener("input", (event) => { draft.value = event.target.value; });
+    } else if (draft.action === "media") {
+      host.innerHTML = `<label class="field"><span>Media key</span><select id="mediaKey">${MEDIA.map((key) => `<option value="${key}" ${draft.key === key ? "selected" : ""}>${PRETTY[key] || key}</option>`).join("")}</select></label>`;
+      $("mediaKey").addEventListener("change", (event) => { draft.key = event.target.value; });
+    } else if (draft.action === "wheel") {
+      host.innerHTML = `
+        <label class="field"><span>Direction</span><select id="wheelDelta">
+          <option value="-1" ${draft.delta < 0 ? "selected" : ""}>Down / left</option>
+          <option value="1" ${draft.delta > 0 ? "selected" : ""}>Up / right</option>
+        </select></label>
+        <div class="field"><span>Modifiers</span>
+          <div class="rowline">${["ctrl", "shift", "alt"].map((mod) => `<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-mod="${mod}" ${(draft.modifiers || []).includes(mod) ? "checked" : ""}/> ${PRETTY[mod]}</label>`).join("")}</div>
+          <div class="note">Ctrl + wheel is zoom in most apps.</div>
+        </div>`;
+      $("wheelDelta").addEventListener("change", (event) => { draft.delta = Number(event.target.value); });
+      host.querySelectorAll("[data-mod]").forEach((box) => box.addEventListener("change", () => {
+        draft.modifiers = [...host.querySelectorAll("[data-mod]:checked")].map((entry) => entry.dataset.mod);
+      }));
+    } else if (draft.action === "layer") {
+      const modes = [
+        ["switch", "Switch to layer"],
+        ["oneshot", "Use layer for the next key"],
+        ["momentary", "Use layer while held"],
+        ["next", "Next layer in this context"],
+        ["prev", "Previous layer in this context"],
+        ["back", "Back to context default"],
+      ];
+      const ctx = context();
+      const names = [...ctx.layers];
+      if (draft.name && !names.includes(draft.name)) names.push(draft.name);
+      const options = names.map((id) => {
+        const entry = value().layers[id];
+        const other = !ctx.layers.includes(id) ? " (other context)" : "";
+        return `<option value="${escapeAttr(id)}" ${draft.name === id ? "selected" : ""}>${escapeHtml(entry?.label || id)}${other}</option>`;
+      }).join("");
+      const needsName = ["switch", "oneshot", "momentary"].includes(draft.mode);
+      host.innerHTML = `
+        <label class="field"><span>Mode</span><select id="layerMode">${modes.map(([value, label]) => `<option value="${value}" ${draft.mode === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+        <label class="field" id="layerNameField" style="${needsName ? "" : "display:none"}"><span>Target layer</span><select id="layerName">${options}</select></label>
+        <div class="note" id="layerNote"></div>`;
+      const notes = {
+        switch: "Stays active until you switch again or focus another context.",
+        oneshot: "Applies to the next key you press, then returns to the layer you were on.",
+        momentary: "Only meaningful on Hold: active while the key is down.",
+        next: "Cycles forward through this context's layer list.",
+        prev: "Cycles backward through this context's layer list.",
+        back: "Returns to the context's default layer.",
+      };
+      const update = () => {
+        $("layerNote").textContent = notes[draft.mode] || "";
+        $("layerNameField").style.display = ["switch", "oneshot", "momentary"].includes(draft.mode) ? "" : "none";
+      };
+      update();
+      $("layerMode").addEventListener("change", (event) => {
+        draft.mode = event.target.value;
+        if (!["switch", "oneshot", "momentary"].includes(draft.mode)) delete draft.name;
+        else if (!draft.name) draft.name = selectedLayer;
+        renderActionFields();
+      });
+      $("layerName").addEventListener("change", (event) => { draft.name = event.target.value; });
+    } else if (draft.action === "window") {
+      host.innerHTML = `<label class="field"><span>Action</span><select id="windowDo">${["minimize", "maximize", "restore", "close"].map((value) => `<option value="${value}" ${draft.do === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>`;
+      $("windowDo").addEventListener("change", (event) => { draft.do = event.target.value; });
+    } else if (["launch", "url", "script"].includes(draft.action)) {
+      const config = {
+        launch: ["Target (app or file)", draft.target || ""],
+        url: ["URL", draft.target || "https://"],
+        script: ["Command", draft.cmd || ""],
+      }[draft.action];
+      host.innerHTML = `<label class="field"><span>${config[0]}</span><input type="text" id="targetValue" value="${escapeAttr(config[1])}" /></label>`;
+      $("targetValue").addEventListener("input", (event) => {
+        if (draft.action === "script") draft.cmd = event.target.value;
+        else draft.target = event.target.value;
+      });
+    } else if (draft.action === "peek" || draft.action === "none") {
+      host.innerHTML = `<div class="note">${draft.action === "peek" ? "On Hold, the legend stays on screen until you release the key. On Tap it just shows the legend." : "The input does nothing."}</div>`;
+    }
+  }
+
+  function renderKeysBox() {
+    const box = $("keysBox");
+    if (!box) return;
+    if (recording) {
+      box.innerHTML = `<span class="recording">Press the chord…</span>`;
+      return;
+    }
+    const keys = draft.keys || [];
+    box.innerHTML = keys.length
+      ? keys.map((key) => `<span class="keycap">${escapeHtml(PRETTY[key] || prettyFallback(key))}</span>`).join(`<span style="color:#4e5766">+</span>`)
+      : `<span style="color:#5d6676">No keys yet</span>`;
+  }
+
+  function renderSteps() {
+    const box = $("stepsBox");
+    if (!box) return;
+    box.innerHTML = "";
+    draft.steps.forEach((step, index) => {
+      const kind = step.keys ? "keys" : step.text !== undefined ? "text" : "delay";
+      const row = document.createElement("div");
+      row.className = "step";
+      row.innerHTML = `
+        <select data-kind>
+          <option value="keys" ${kind === "keys" ? "selected" : ""}>Chord</option>
+          <option value="text" ${kind === "text" ? "selected" : ""}>Text</option>
+          <option value="delay" ${kind === "delay" ? "selected" : ""}>Delay</option>
+        </select>
+        <input data-value placeholder="${kind === "delay" ? "milliseconds" : kind === "text" ? "text" : "ctrl, shift, p"}" value="${escapeAttr(kind === "keys" ? (step.keys || []).join(", ") : kind === "text" ? step.text : String(step.delay || 0))}" />
+        <button class="del" title="Remove step">✕</button>`;
+      const select = row.querySelector("[data-kind]");
+      const input = row.querySelector("[data-value]");
+      const del = row.querySelector(".del");
+      const read = () => {
+        if (select.value === "delay") draft.steps[index] = { delay: Number(input.value) || 0 };
+        else if (select.value === "text") draft.steps[index] = { text: input.value };
+        else draft.steps[index] = { keys: input.value.split(",").map((part) => part.trim()).filter(Boolean) };
+      };
+      select.addEventListener("change", () => {
+        draft.steps[index] = select.value === "delay" ? { delay: 80 } : select.value === "text" ? { text: "" } : { keys: [] };
+        renderSteps();
+      });
+      input.addEventListener("input", read);
+      del.addEventListener("click", () => { draft.steps.splice(index, 1); renderSteps(); });
+      box.appendChild(row);
+    });
+  }
+
+  function applyAction() {
+    if (!draft) return;
+    if (draft.action === "hotkey" && (!draft.keys || !draft.keys.length)) {
+      toast("Record a chord first.", true);
+      return;
+    }
+    if (draft.action === "sequence" && (!draft.steps || !draft.steps.length)) {
+      toast("Add at least one step.", true);
+      return;
+    }
+    if (draft.action === "layer" && ["switch", "oneshot", "momentary"].includes(draft.mode) && !draft.name) {
+      toast("Choose a target layer.", true);
+      return;
+    }
+    setGesture(editing.input, editing.gesture, draft);
+    closeAction();
+  }
+
+  function clearAction() {
+    setGesture(editing.input, editing.gesture, null);
+    closeAction();
+  }
+
+  // ---------------------------------------------------------------- settings
+
+  function openSettings() {
+    const s = value().settings;
+    $("osdEnabled").checked = s.osd.enabled;
+    $("osdFocus").checked = s.osd.show_on_focus;
+    $("osdPress").checked = s.osd.show_on_press;
+    $("osdDuration").value = s.osd.duration_ms;
+    $("osdMonitor").value = s.osd.monitor || "focused";
+    $("doubleTap").value = s.gestures.double_tap_ms;
+    $("holdMs").value = s.gestures.hold_ms;
+    $("knobAccel").checked = s.knob.acceleration;
+    $("knobWindow").value = s.knob.window_ms;
+    $("knobMult").value = (s.knob.multiplier || []).join(", ");
+    const pad = value().pad;
+    const order = ["k1", "k2", "k3", "knob_ccw", "knob_press", "knob_cw"];
+    const inputs = Object.entries(pad.inputs || {}).sort(
+      (a, b) => order.indexOf(a[0]) - order.indexOf(b[0])
+    );
+    $("padReadonly").innerHTML = `
+      <span>Device</span><b>${pad.vid.toString(16).padStart(4, "0")}:${pad.pid.toString(16).padStart(4, "0")}</b>
+      ${inputs.map(([name, key]) => `<span>${escapeHtml(name)}</span><b>${escapeHtml(key)}</b>`).join("")}
+    `;
+    resetArmed = false;
+    $("resetBtn").textContent = "Reset to factory defaults";
+    $("resetBtn").classList.remove("primary");
+    $("settingsModal").classList.remove("hidden");
+  }
+
+  function closeSettings() {
+    $("settingsModal").classList.add("hidden");
+  }
+
+  function previewOsd() {
+    const entry = layer();
+    const ctx = context();
+    if (!entry || !ctx) return;
+
+    const gestureLabel = (input, gesture) => {
+      const gestures = gesturesOf((entry.bindings || {})[input]);
+      return gestures[gesture] ? summary(gestures[gesture]) : "";
+    };
+    const tap = (input) => gestureLabel(input, "tap") || "—";
+
+    const rail = ctx.layers.map((id) => ({
+      id,
+      label: value().layers[id]?.label || id,
+      active: id === selectedLayer,
+    }));
+
+    const gestures = {
+      k1: { tap: gestureLabel("k1", "tap"), double: gestureLabel("k1", "double"), hold: gestureLabel("k1", "hold") },
+      k2: { tap: gestureLabel("k2", "tap"), double: gestureLabel("k2", "double"), hold: gestureLabel("k2", "hold") },
+      k3: { tap: gestureLabel("k3", "tap"), double: gestureLabel("k3", "double"), hold: gestureLabel("k3", "hold") },
+      knob_ccw: { tap: gestureLabel("knob_ccw", "tap"), double: "", hold: "" },
+      knob_press: { tap: gestureLabel("knob_press", "tap"), double: gestureLabel("knob_press", "double"), hold: gestureLabel("knob_press", "hold") },
+      knob_cw: { tap: gestureLabel("knob_cw", "tap"), double: "", hold: "" },
+    };
+
+    const payload = {
+      context: ctx.label || selectedContext,
+      layer: entry.label || selectedLayer,
+      color: entry.color || "#7dd3fc",
+      keys: [tap("k1"), tap("k2"), tap("k3")],
+      knob: [tap("knob_ccw"), tap("knob_press"), tap("knob_cw")],
+      badge: "preview",
+      action: null,
+      pressed: null,
+      rail,
+      mode: "layer",
+      gestures,
+    };
+    invoke("show_osd", {
+      payload,
+      sticky: false,
+      monitor: value().settings.osd.monitor || "focused",
+    });
+  }
+
+  function bindSettings() {
+    $("osdEnabled").addEventListener("change", (event) => { value().settings.osd.enabled = event.target.checked; touch(); });
+    $("osdFocus").addEventListener("change", (event) => { value().settings.osd.show_on_focus = event.target.checked; touch(); });
+    $("osdPress").addEventListener("change", (event) => { value().settings.osd.show_on_press = event.target.checked; touch(); });
+    $("osdDuration").addEventListener("change", (event) => { value().settings.osd.duration_ms = Math.max(300, Number(event.target.value) || 1500); touch(); });
+    $("osdMonitor").addEventListener("change", (event) => { value().settings.osd.monitor = event.target.value; touch(); });
+    $("doubleTap").addEventListener("change", (event) => { value().settings.gestures.double_tap_ms = Math.max(120, Number(event.target.value) || 260); touch(); });
+    $("holdMs").addEventListener("change", (event) => { value().settings.gestures.hold_ms = Math.max(200, Number(event.target.value) || 420); touch(); });
+    $("knobAccel").addEventListener("change", (event) => { value().settings.knob.acceleration = event.target.checked; touch(); });
+    $("knobWindow").addEventListener("change", (event) => { value().settings.knob.window_ms = Math.max(30, Number(event.target.value) || 120); touch(); });
+    $("knobMult").addEventListener("change", (event) => {
+      value().settings.knob.multiplier = event.target.value.split(",").map((part) => Number(part.trim())).filter((n) => Number.isFinite(n) && n > 0);
+      if (!value().settings.knob.multiplier.length) value().settings.knob.multiplier = [1, 1, 2, 4, 8];
+      $("knobMult").value = value().settings.knob.multiplier.join(", ");
+      touch();
+    });
+
+    $("resetBtn").addEventListener("click", async () => {
+      if (!resetArmed) {
+        resetArmed = true;
+        $("resetBtn").textContent = "Click again to reset everything";
+        $("resetBtn").classList.add("primary");
+        setTimeout(() => {
+          resetArmed = false;
+          $("resetBtn").textContent = "Reset to factory defaults";
+          $("resetBtn").classList.remove("primary");
+        }, 3000);
+        return;
+      }
+      try {
+        await invoke("reset_config");
+        await reloadState();
+        closeSettings();
+        toast("Reset to factory defaults.", false, "good");
+      } catch (error) {
+        toast(String(error), true);
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------- misc
+
+  function confirmArm(button, message) {
+    if (button.classList.contains("arm")) return true;
+    button.classList.add("arm");
+    const original = button.textContent;
+    button.textContent = message || "Click again to confirm";
+    setTimeout(() => {
+      button.classList.remove("arm");
+      button.textContent = original;
+    }, 3000);
+    return false;
+  }
+
+  function prettyFallback(key) {
+    return key.length === 1 ? key.toUpperCase() : key.charAt(0).toUpperCase() + key.slice(1);
+  }
+
+  function summary(action) {
+    if (!action) return "—";
+    switch (action.action) {
+      case "hotkey": return (action.keys || []).map((key) => PRETTY[key] || prettyFallback(key)).join(" + ");
+      case "sequence": return `Sequence · ${(action.steps || []).length} step${(action.steps || []).length === 1 ? "" : "s"}`;
+      case "media": return PRETTY[action.key] || action.key;
+      case "wheel": return `Wheel ${action.delta < 0 ? "↓" : "↑"}${(action.modifiers || []).length ? " +" + action.modifiers.map((m) => PRETTY[m]).join("+") : ""}`;
+      case "text": return `“${truncate(action.value || "", 18)}”`;
+      case "layer": return action.mode === "next" || action.mode === "prev" || action.mode === "back"
+        ? `Layer · ${action.mode}`
+        : `Layer · ${(value().layers[action.name]?.label) || action.name || action.mode}`;
+      case "peek": return "Peek legend";
+      case "launch": return `Open ${truncate(action.target || "", 20)}`;
+      case "url": return "Open URL";
+      case "script": return "Run command";
+      case "window": return `Window ${action.do}`;
+      default: return "—";
+    }
+  }
+
+  function truncate(value, max) {
+    return value.length > max ? value.slice(0, max - 1) + "…" : value;
+  }
+  function clone(value) { return JSON.parse(JSON.stringify(value)); }
+  function nextId(prefix) {
+    let n = 1;
+    const map = prefix === "context" ? value().contexts : value().layers;
+    while (map[`${prefix}${n}`]) n += 1;
+    return `${prefix}${n}`;
+  }
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function escapeAttr(value) { return escapeHtml(value).replace(/`/g, "&#96;"); }
+
+  let toastTimer = null;
+  function toast(message, bad = false, kind = "") {
+    const node = $("toast");
+    node.textContent = message;
+    node.className = "toast show" + (bad ? " bad" : kind ? " " + kind : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { node.className = "toast"; }, bad ? 6000 : 3000);
+  }
+
+  function codeToName(code, key) {
+    if (/^Key[A-Z]$/.test(code)) return code.slice(3).toLowerCase();
+    if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+    if (/^F([1-9]|1[0-9]|2[0-4])$/.test(code)) return code.toLowerCase();
+    const map = {
+      Space: "space", Enter: "enter", Escape: "esc", Tab: "tab", Backspace: "backspace",
+      ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down",
+      Backquote: "grave", Minus: "minus", Equal: "equal", BracketLeft: "leftbracket",
+      BracketRight: "rightbracket", Backslash: "backslash", Semicolon: "semicolon",
+      Quote: "quote", Comma: "comma", Period: "dot", Slash: "slash",
+      Home: "home", End: "end", PageUp: "pageup", PageDown: "pagedown",
+      Insert: "insert", Delete: "delete", PrintScreen: "printscreen",
+      ScrollLock: "scrolllock", Pause: "pause", CapsLock: "capslock",
+    };
+    if (map[code]) return map[code];
+    if (/^Numpad[0-9]$/.test(code)) return "num" + code.slice(6);
+    if (key && key.length === 1) return key.toLowerCase();
+    return null;
+  }
+
+  // ---------------------------------------------------------------- events
+
+  $("actionType").innerHTML = ACTION_TYPES.map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
+  $("actionType").addEventListener("change", (event) => { draft = defaultAction(event.target.value); renderActionFields(); });
+  $("modalClose").addEventListener("click", closeAction);
+  $("cancelAction").addEventListener("click", closeAction);
+  $("applyAction").addEventListener("click", applyAction);
+  $("clearAction").addEventListener("click", clearAction);
+  $("actionModal").addEventListener("click", (event) => { if (event.target === $("actionModal")) closeAction(); });
+
+  $("editMatches").addEventListener("click", openMatches);
+  $("matchesClose").addEventListener("click", closeMatches);
+  $("matchesDone").addEventListener("click", closeMatches);
+  $("matchesModal").addEventListener("click", (event) => { if (event.target === $("matchesModal")) closeMatches(); });
+
+  $("addContext").addEventListener("click", addContext);
+  $("addRule").addEventListener("click", addRule);
+  $("useCurrent").addEventListener("click", useCurrentApp);
+  $("reloadBtn").addEventListener("click", reloadState);
+  $("folderBtn").addEventListener("click", () => invoke("reveal_config"));
+  $("settingsBtn").addEventListener("click", openSettings);
+  $("settingsClose").addEventListener("click", closeSettings);
+  $("settingsDone").addEventListener("click", closeSettings);
+  $("previewOsd").addEventListener("click", previewOsd);
+  $("settingsModal").addEventListener("click", (event) => { if (event.target === $("settingsModal")) closeSettings(); });
+  $("exportBtn").addEventListener("click", async () => {
+    try {
+      const path = await invoke("export_config");
+      toast(`Exported to ${path}`, false, "good");
+    } catch (error) { toast(String(error), true); }
+  });
+  $("status").addEventListener("click", () => { if ($("status").classList.contains("err")) saveState(); });
+
+  $("deleteCtx").addEventListener("click", deleteContext);
+  $("makeDefaultCtx").addEventListener("click", () => {
+    value().default_context = selectedContext;
+    touch();
+    renderContexts();
+    renderEditor();
+  });
+  $("ctxLabel").addEventListener("input", (event) => {
+    context().label = event.target.value;
+    touch();
+    renderContexts();
+  });
+  $("layerLabel").addEventListener("input", (event) => {
+    layer().label = event.target.value;
+    touch();
+    renderTabs();
+  });
+  $("layerColor").addEventListener("input", (event) => {
+    layer().color = event.target.value;
+    touch();
+    renderTabs();
+    renderContexts();
+  });
+  $("makeDefaultLayer").addEventListener("click", setDefaultLayer);
+  $("removeLayer").addEventListener("click", removeLayerFromContext);
+  $("moveLeft").addEventListener("click", () => moveLayer(-1));
+  $("moveRight").addEventListener("click", () => moveLayer(1));
+
+  document.addEventListener("keydown", (event) => {
+    if (recording) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (["Control", "Shift", "Alt", "Meta"].includes(event.key)) {
+        const mods = [];
+        if (event.ctrlKey) mods.push("ctrl");
+        if (event.shiftKey) mods.push("shift");
+        if (event.altKey) mods.push("alt");
+        if (event.metaKey) mods.push("win");
+        $("keysBox").innerHTML = mods.length
+          ? mods.map((mod) => `<span class="keycap">${PRETTY[mod]}</span>`).join("") + `<span class="recording">+ …</span>`
+          : `<span class="recording">Press the chord…</span>`;
+        return;
+      }
+      if (event.key === "Escape") {
+        recording = false;
+        $("recordBtn").textContent = "Record";
+        $("recordBtn").classList.remove("primary");
+        renderKeysBox();
+        return;
+      }
+      const mods = [];
+      if (event.ctrlKey) mods.push("ctrl");
+      if (event.shiftKey) mods.push("shift");
+      if (event.altKey) mods.push("alt");
+      if (event.metaKey) mods.push("win");
+      const key = codeToName(event.code, event.key);
+      if (!key) return;
+      draft.keys = [...new Set([...mods, key])];
+      recording = false;
+      $("recordBtn").textContent = "Record";
+      $("recordBtn").classList.remove("primary");
+      renderKeysBox();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      if (!$("actionModal").classList.contains("hidden")) closeAction();
+      else if (!$("matchesModal").classList.contains("hidden")) closeMatches();
+      else if (!$("settingsModal").classList.contains("hidden")) closeSettings();
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+      event.preventDefault();
+      saveState();
+    }
+  });
+
+  bindSettings();
+  init();
+</script>
+</body>
+</html>

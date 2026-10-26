@@ -1,0 +1,65 @@
+# Safe end-to-end test for the agent.
+#
+# Seed a throwaway database with it:
+#   $env:MACROKEY_DB="$env:TEMP\macrokey-test.db"
+#   Remove-Item "$env:MACROKEY_DB*" -ErrorAction SilentlyContinue
+#   agent.exe --seed config/agent.test.yaml
+#
+# Every input writes to %TEMP%\macrokey-test.log instead of typing into the
+# focused app, so the pad can be pressed with anything in the foreground.
+
+version: 3
+
+pad:
+  vid: 0x1189
+  pid: 0x8890
+  interface: MI_00
+  inputs:
+    k1: F13
+    k2: F14
+    k3: F15
+    knob_press: F16
+    knob_ccw: F17
+    knob_cw: F18
+
+settings:
+  osd:
+    enabled: true
+    duration_ms: 2000
+    monitor: focused
+    anchor: bottom-center
+    show_on_focus: true
+    show_on_press: true
+  gestures:
+    double_tap_ms: 260
+    hold_ms: 420
+  knob:
+    acceleration: true
+    window_ms: 120
+    multiplier: [1, 1, 2, 4, 8]
+
+contexts:
+  test:
+    label: Test
+    default_layer: test
+    layers: [test]
+
+layers:
+  test:
+    label: Pad test
+    color: "#a3e635"
+    bindings:
+      k1: { action: script, cmd: 'echo k1 >> %TEMP%\macrokey-test.log' }
+      k2: { action: script, cmd: 'echo k2 >> %TEMP%\macrokey-test.log' }
+      k3:
+        tap: { action: script, cmd: 'echo k3 >> %TEMP%\macrokey-test.log' }
+        double: { action: script, cmd: 'echo k3-double >> %TEMP%\macrokey-test.log' }
+      knob_ccw: { action: script, cmd: 'echo ccw >> %TEMP%\macrokey-test.log' }
+      knob_cw:  { action: script, cmd: 'echo cw >> %TEMP%\macrokey-test.log' }
+      knob_press:
+        tap: { action: script, cmd: 'echo press >> %TEMP%\macrokey-test.log' }
+        double: { action: script, cmd: 'echo press-double >> %TEMP%\macrokey-test.log' }
+        hold: { action: peek }
+
+rules: []
+default_context: test
