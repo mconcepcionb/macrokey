@@ -32,6 +32,10 @@ public issue for a security problem.
   the settings window.
 - The app is not code-signed. Windows SmartScreen may warn about the release
   binary.
+- The Cargo lockfile includes Linux/GTK transitive crates that Tauri uses on
+  Linux. The release target is Windows, so those crates are not compiled.
+  Dependabot's `glib` alert is dismissed as `not_used` for this Windows-only
+  build; its failed security-update run is not a build failure.
 - The agent does not capture or log normal keyboard input; it filters Raw Input
   to the configured pad device. The log contains context labels and window titles
   used for rule matching, so review it before sharing it publicly.

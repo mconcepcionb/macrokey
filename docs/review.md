@@ -76,7 +76,8 @@ Priority order:
    titles used for rule matching. Mention that in bug-report instructions.
 9. **Dependency hygiene.** `serde_yaml` 0.9 is effectively unmaintained; consider
    `serde_yml`/`serde_yaml_ng` at the next dependency refresh. Run `cargo audit`
-   before a release.
+   before a release. Dependabot flags `glib` (Linux/GTK, not compiled on Windows);
+   that alert is dismissed as `not_used`.
 10. **YAML import.** Export exists; import is still missing. That is fine for v0.1
     but limits sharing profiles.
 11. **Hardware scope.** The README must keep saying that this is not a generic
