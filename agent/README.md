@@ -91,6 +91,9 @@ watches the revision counter and reloads within ~600 ms.
 - **Export** writes `%APPDATA%\macrokey\export.yaml` (backup, not the runtime
   source of truth).
 - **Reset to factory defaults** reseeds from the embedded seed.
+- While Settings is foreground, pad actions are paused and transient gestures
+  are cleared. **Preview legend** and the tray legend still work; return focus
+  to the target app to resume the pad.
 - For a HUD preview without the agent, open `agent/ui/index.html?demo=1` in a
   browser.
 
@@ -164,6 +167,8 @@ For the CDP helper, run the app with
 - **`cargo run` exits immediately:** a release/tray instance is already running.
   Stop it from the tray (**Quit**) or `Stop-Process -Name macrokey-agent` first;
   the single-instance guard forwards the second launch to the running agent.
+- **Pad does nothing while Settings is open:** intentional. Settings is a
+  foreground window; use **Preview legend** or return focus to the target app.
 - **An action does nothing in one app:** that app may be elevated. Windows blocks
   synthetic input from a non-elevated process (UIPI); the failure is recorded in
   `agent.log`.
@@ -178,8 +183,6 @@ For the CDP helper, run the app with
   apps).
 - Installer, code signing, opt-in autostart, auto-update.
 - Schema migrations and automated engine/UI tests.
-- Pausing pad actions while the Settings window owns focus; use **Preview
-  legend** for a safe test.
 - Per-game Steam contexts (the client is `steamwebhelper.exe`; games are their
   own process).
 

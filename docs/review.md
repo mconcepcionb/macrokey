@@ -44,6 +44,7 @@ It is **not yet a 1.0 / mass-market release**:
 | Medium | Missing `fmt`/`clippy` cleanliness and only 3 tests. | Cleaned lints, 7 tests, CI. |
 | Low | The log grew without bound. | Rotates to `agent.log.1` at 2 MB. |
 | Low | `mutex.lock().unwrap()` on input/legend paths could panic if poisoned. | Non-panicking lock handling. |
+| Medium | Pad actions executed into the Settings window while editing. | Engine pauses input while Settings is foreground, clears transient gesture state; Preview and tray legend still work. |
 | Low | Capabilities description claimed no webview IPC. | Corrected description; local UI only. |
 
 ## Remaining risks and recommended next steps
@@ -68,23 +69,19 @@ Priority order:
 6. **Suppressing `F13`–`F18`.** The phantom keys still reach the focused app.
    Most apps ignore them, but a low-level hook or an Interception driver would be
    needed for completeness.
-7. **Settings-focus behavior.** While the Settings window is foreground, pad
-   actions still execute into that window. The Preview button is the safe way to
-   test. Consider pausing actions (while still showing the HUD) when the agent's
-   own window is focused.
-8. **Logging hygiene.** The log rotates at 2 MB, but it still contains window
+7. **Logging hygiene.** The log rotates at 2 MB, but it still contains window
    titles used for rule matching. Mention that in bug-report instructions.
-9. **Dependency hygiene.** `serde_yaml` 0.9 is effectively unmaintained; consider
+8. **Dependency hygiene.** `serde_yaml` 0.9 is effectively unmaintained; consider
    `serde_yml`/`serde_yaml_ng` at the next dependency refresh. Run `cargo audit`
    before a release. Dependabot flags `glib` (Linux/GTK, not compiled on Windows);
    that alert is dismissed as `not_used`.
-10. **YAML import.** Export exists; import is still missing. That is fine for v0.1
-    but limits sharing profiles.
-11. **Hardware scope.** The README must keep saying that this is not a generic
+9. **YAML import.** Export exists; import is still missing. That is fine for v0.1
+   but limits sharing profiles.
+10. **Hardware scope.** The README must keep saying that this is not a generic
     macropad app: it targets one board and one flashed profile.
-12. **Per-game Steam contexts.** Currently one `steamwebhelper.exe` context; games
+11. **Per-game Steam contexts.** Currently one `steamwebhelper.exe` context; games
     are separate processes.
-13. **One-shot edge cases.** A one-shot layer is consumed when an action actually
+12. **One-shot edge cases.** A one-shot layer is consumed when an action actually
     runs. A double/hold key can leave it active during its gesture window, so a
     second key can also see it. Define and test the intended "next key only"
     semantics for delayed gestures.

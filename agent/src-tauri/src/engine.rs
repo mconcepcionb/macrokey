@@ -38,6 +38,7 @@ struct Engine {
     runtime: Runtime,
     app: AppHandle,
     own_exe: String,
+    settings_focused: bool,
     last_focus: Option<FocusInfo>,
     context: String,
     manual_layer: Option<String>,
@@ -66,6 +67,7 @@ impl Engine {
             runtime,
             app,
             own_exe,
+            settings_focused: false,
             last_focus: None,
             context,
             manual_layer: None,
@@ -183,7 +185,15 @@ impl Engine {
 
     fn on_focus(&mut self, focus: FocusInfo) {
         if focus.exe.eq_ignore_ascii_case(&self.own_exe) {
+            if !self.settings_focused {
+                self.settings_focused = true;
+                self.pause_for_settings();
+            }
             return;
+        }
+        if self.settings_focused {
+            self.settings_focused = false;
+            self.log("settings unfocused; pad actions resumed");
         }
         self.last_focus = Some(focus.clone());
         let resolved = self.runtime.resolve_context(&focus);
@@ -213,11 +223,30 @@ impl Engine {
     }
 
     fn on_input(&mut self, event: InputEvent) {
+        if self.settings_focused {
+            return;
+        }
         if event.down {
             self.on_down(event);
         } else {
             self.on_up(event);
         }
+    }
+
+    /// Settings is a foreground window like any other. Do not type synthetic
+    /// keys into the editor or let a gesture escape when the user switches
+    /// windows mid-press. Preview and the tray legend still work.
+    fn pause_for_settings(&mut self) {
+        self.pressed.clear();
+        self.states.clear();
+        self.pending_taps.clear();
+        self.overlay = None;
+        self.oneshot = None;
+        self.peek_input = None;
+        self.last_knob = None;
+        self.update_tray(None);
+        osd::hide(&self.app);
+        self.log("settings focused; pad actions paused");
     }
 
     fn on_down(&mut self, event: InputEvent) {

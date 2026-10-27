@@ -29,7 +29,8 @@ The app is intentionally small and local. It is not yet code-signed, does not
 have an installer, autostart or auto-updater, and the schema has no migration
 framework. Read [docs/review.md](docs/review.md) for the full readiness review
 and [PUBLISHING.md](PUBLISHING.md) for the release checklist. Changes are listed
-in [CHANGELOG.md](CHANGELOG.md).
+in [CHANGELOG.md](CHANGELOG.md); the remaining gap-closure plan is
+[docs/roadmap.md](docs/roadmap.md).
 
 ## Quick start
 
