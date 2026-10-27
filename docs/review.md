@@ -19,8 +19,9 @@ It is **not yet a 1.0 / mass-market release**:
 
 - `cargo fmt --check` — clean.
 - `cargo clippy --all-targets -- -D warnings` — clean.
-- `cargo test` — 7 tests pass (`config` rules/validation/round-trips,
-  `db` SQLite round-trip, action key parsing, tray text shortening).
+- `cargo test` - 9 tests pass (`config` rules/validation/round-trips,
+  `db` SQLite round-trip + v1 migration/backup/newer-schema refusal, action key
+  parsing, tray text shortening).
 - Live debug-build checks:
   - fresh database → settings window opens by itself; DB is seeded; `agent.log`
     is written next to the DB;
@@ -41,7 +42,8 @@ It is **not yet a 1.0 / mass-market release**:
 | High | An active one-shot layer could hide a hold layer switch and leave the tray stale. | Layer holds consume the one-shot; one-shot consumption updates the tray immediately. |
 | Medium | OSD hide had a race and blocked the engine thread for 180 ms on context changes. | Generation-guarded, asynchronous hide; show claims its generation before window work. |
 | Medium | UTF-16 text could be split between a surrogate pair. | Chunks never end on a high surrogate. |
-| Medium | Missing `fmt`/`clippy` cleanliness and only 3 tests. | Cleaned lints, 7 tests, CI. |
+| Medium | Missing `fmt`/`clippy` cleanliness and only 3 tests. | Cleaned lints, tests expanded (9 now), CI. |
+| High | `meta.schema` was overwritten on every open; no migration path or backup. | Schema v2 with a pre-migration `VACUUM INTO` backup, newer-schema refusal, and tests. |
 | Low | The log grew without bound. | Rotates to `agent.log.1` at 2 MB. |
 | Low | `mutex.lock().unwrap()` on input/legend paths could panic if poisoned. | Non-panicking lock handling. |
 | Medium | Pad actions executed into the Settings window while editing. | Engine pauses input while Settings is foreground, clears transient gesture state; Preview and tray legend still work. |
@@ -61,27 +63,24 @@ Priority order:
    double-only, hold + one-shot, rotation acceleration, context switches during a
    pending tap. Extract the pure decision logic or add a headless engine test
    harness.
-4. **Schema migrations.** `meta.schema` is written but never checked. Before the
-   first breaking config change, add a migration table and a backup-before-upgrade
-   step. Export remains the manual backup path.
-5. **CSP and UI hardening.** Move inline scripts/styles to files and set a CSP if
+4. **CSP and UI hardening.** Move inline scripts/styles to files and set a CSP if
    the UI will ever render remote content. Today it loads only bundled assets.
-6. **Suppressing `F13`–`F18`.** The phantom keys still reach the focused app.
+5. **Suppressing `F13`-`F18`.** The phantom keys still reach the focused app.
    Most apps ignore them, but a low-level hook or an Interception driver would be
    needed for completeness.
-7. **Logging hygiene.** The log rotates at 2 MB, but it still contains window
+6. **Logging hygiene.** The log rotates at 2 MB, but it still contains window
    titles used for rule matching. Mention that in bug-report instructions.
-8. **Dependency hygiene.** `serde_yaml` 0.9 is effectively unmaintained; consider
+7. **Dependency hygiene.** `serde_yaml` 0.9 is effectively unmaintained; consider
    `serde_yml`/`serde_yaml_ng` at the next dependency refresh. Run `cargo audit`
    before a release. Dependabot flags `glib` (Linux/GTK, not compiled on Windows);
    that alert is dismissed as `not_used`.
-9. **YAML import.** Export exists; import is still missing. That is fine for v0.1
+8. **YAML import.** Export exists; import is still missing. That is fine for v0.1
    but limits sharing profiles.
-10. **Hardware scope.** The README must keep saying that this is not a generic
-    macropad app: it targets one board and one flashed profile.
-11. **Per-game Steam contexts.** Currently one `steamwebhelper.exe` context; games
+9. **Hardware scope.** The README must keep saying that this is not a generic
+   macropad app: it targets one board and one flashed profile.
+10. **Per-game Steam contexts.** Currently one `steamwebhelper.exe` context; games
     are separate processes.
-12. **One-shot edge cases.** A one-shot layer is consumed when an action actually
+11. **One-shot edge cases.** A one-shot layer is consumed when an action actually
     runs. A double/hold key can leave it active during its gesture window, so a
     second key can also see it. Define and test the intended "next key only"
     semantics for delayed gestures.

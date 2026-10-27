@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context as _, Result};
 use indexmap::IndexMap;
@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS rules (
 );
 "#;
 
+/// Bump this and add a migration block in `initialize` for every schema change.
+const SCHEMA_VERSION: i64 = 2;
+
 // ---------------------------------------------------------------------------
 // location
 // ---------------------------------------------------------------------------
@@ -101,13 +104,86 @@ fn open(path: &Path) -> Result<Connection> {
     Ok(connection)
 }
 
-fn initialize(connection: &mut Connection, seed: Option<&Path>) -> Result<()> {
+fn backup_database(connection: &Connection, path: &Path, schema: i64) -> Result<PathBuf> {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let file_name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| "macrokey.db".into());
+
+    let mut backup = path.with_file_name(format!("{file_name}.bak-v{schema}-{stamp}"));
+    let mut suffix = 0;
+    while backup.exists() {
+        suffix += 1;
+        backup = path.with_file_name(format!("{file_name}.bak-v{schema}-{stamp}-{suffix}"));
+    }
+
+    // VACUUM INTO produces a consistent copy, including committed WAL pages.
+    let escaped = backup.to_string_lossy().replace('\'', "''");
+    connection
+        .execute_batch(&format!("VACUUM INTO '{escaped}'"))
+        .with_context(|| format!("backup database to {}", backup.display()))?;
+    Ok(backup)
+}
+
+fn initialize(connection: &mut Connection, path: &Path, seed: Option<&Path>) -> Result<()> {
     connection.execute_batch(SCHEMA)?;
-    connection.execute(
-        "INSERT INTO meta(key, value) VALUES('schema', '1')
-         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-        [],
-    )?;
+
+    let mut schema: i64 = connection
+        .query_row(
+            "SELECT CAST(value AS INTEGER) FROM meta WHERE key = 'schema'",
+            [],
+            |row| row.get(0),
+        )
+        .optional()?
+        .unwrap_or(0);
+    let had_data: i64 =
+        connection.query_row("SELECT COUNT(*) FROM contexts", [], |row| row.get(0))?;
+
+    if schema == 0 {
+        // Early databases did not write the schema key; treat them as v1.
+        schema = 1;
+        connection.execute(
+            "INSERT INTO meta(key, value) VALUES('schema', '1')
+             ON CONFLICT(key) DO NOTHING",
+            [],
+        )?;
+    }
+
+    if schema > SCHEMA_VERSION {
+        anyhow::bail!(
+            "database schema v{schema} is newer than this build (v{SCHEMA_VERSION}); update macrokey"
+        );
+    }
+
+    if schema < SCHEMA_VERSION {
+        if had_data > 0 {
+            let backup = backup_database(connection, path, schema)?;
+            crate::log_info!("[db] backed up schema v{schema} to {}", backup.display());
+        }
+
+        let transaction = connection.transaction()?;
+        if schema < 2 {
+            transaction.execute_batch(
+                "CREATE INDEX IF NOT EXISTS idx_rules_context ON rules(context_id);",
+            )?;
+        }
+        transaction.execute(
+            "INSERT INTO meta(key, value) VALUES('schema', ?1)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            params![SCHEMA_VERSION.to_string()],
+        )?;
+        transaction.commit()?;
+        if had_data > 0 {
+            crate::log_info!("[db] migrated schema v{schema} -> v{SCHEMA_VERSION}");
+        } else {
+            crate::log_info!("[db] initialized schema v{SCHEMA_VERSION}");
+        }
+    }
+
     connection.execute(
         "INSERT INTO meta(key, value) VALUES('revision', '0')
          ON CONFLICT(key) DO NOTHING",
@@ -146,7 +222,7 @@ fn initialize(connection: &mut Connection, seed: Option<&Path>) -> Result<()> {
 
 pub fn load_config(path: &Path, seed: Option<&Path>) -> Result<ConfigFile> {
     let mut connection = open(path)?;
-    initialize(&mut connection, seed)?;
+    initialize(&mut connection, path, seed)?;
     read_config(&connection)
 }
 
@@ -416,7 +492,7 @@ pub fn save_config(path: &Path, file: &ConfigFile) -> Result<i64> {
     crate::config::compile(file.clone(), path.to_path_buf())?;
 
     let mut connection = open(path)?;
-    initialize(&mut connection, None)?;
+    initialize(&mut connection, path, None)?;
     let transaction = connection.transaction()?;
     write_config(&transaction, file)?;
     bump_revision(&transaction)?;
@@ -434,7 +510,7 @@ pub fn reset(path: &Path) -> Result<i64> {
     crate::config::compile(file.clone(), path.to_path_buf())?;
 
     let mut connection = open(path)?;
-    initialize(&mut connection, None)?;
+    initialize(&mut connection, path, None)?;
     let transaction = connection.transaction()?;
     write_config(&transaction, &file)?;
     bump_revision(&transaction)?;
@@ -519,6 +595,107 @@ mod tests {
         let exported = directory.join("export.yaml");
         export_yaml(&path, &exported).unwrap();
         assert!(exported.exists());
+
+        let _ = std::fs::remove_dir_all(&directory);
+    }
+
+    fn temp_directory(name: &str) -> std::path::PathBuf {
+        let directory = std::env::temp_dir().join(format!(
+            "macrokey-db-{name}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        directory
+    }
+
+    #[test]
+    fn migrates_v1_schema_and_writes_backup() {
+        let directory = temp_directory("migration");
+        let path = directory.join("test.db");
+        let file: ConfigFile = serde_yaml::from_str(SEED_YAML).unwrap();
+        save_config(&path, &file).unwrap();
+
+        // Simulate a v0.1 database: schema 1, before the rules index existed.
+        {
+            let connection = Connection::open(&path).unwrap();
+            connection
+                .execute("UPDATE meta SET value = '1' WHERE key = 'schema'", [])
+                .unwrap();
+            connection
+                .execute("DROP INDEX IF EXISTS idx_rules_context", [])
+                .unwrap();
+        }
+
+        let loaded = load_config(&path, None).unwrap();
+        assert_eq!(loaded.contexts.len(), file.contexts.len());
+        assert_eq!(loaded.rules.len(), file.rules.len());
+
+        let connection = Connection::open(&path).unwrap();
+        let schema: String = connection
+            .query_row("SELECT value FROM meta WHERE key = 'schema'", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(schema, SCHEMA_VERSION.to_string());
+        let index: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master
+                 WHERE type = 'index' AND name = 'idx_rules_context'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(index, 1);
+        drop(connection);
+
+        let backups: Vec<std::path::PathBuf> = std::fs::read_dir(&directory)
+            .unwrap()
+            .filter_map(|entry| {
+                let path = entry.ok()?.path();
+                if path.file_name()?.to_string_lossy().contains(".bak-v1-") {
+                    Some(path)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(backups.len(), 1, "expected one schema-v1 backup");
+        let backup = Connection::open(&backups[0]).unwrap();
+        let backup_schema: String = backup
+            .query_row("SELECT value FROM meta WHERE key = 'schema'", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(backup_schema, "1");
+        let backup_contexts: i64 = backup
+            .query_row("SELECT COUNT(*) FROM contexts", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(backup_contexts, file.contexts.len() as i64);
+        drop(backup);
+
+        let _ = std::fs::remove_dir_all(&directory);
+    }
+
+    #[test]
+    fn refuses_a_newer_schema() {
+        let directory = temp_directory("newer-schema");
+        let path = directory.join("test.db");
+        let file: ConfigFile = serde_yaml::from_str(SEED_YAML).unwrap();
+        save_config(&path, &file).unwrap();
+
+        {
+            let connection = Connection::open(&path).unwrap();
+            connection
+                .execute("UPDATE meta SET value = '99' WHERE key = 'schema'", [])
+                .unwrap();
+        }
+
+        let error = load_config(&path, None).expect_err("a newer schema must be refused");
+        assert!(format!("{error:#}").contains("newer"));
 
         let _ = std::fs::remove_dir_all(&directory);
     }

@@ -5,7 +5,7 @@ Living plan for everything between the published v0.1 prototype and a trustworth
 the fixed blockers.
 
 Started: 2026-10-26. Baseline: public v0.1 prototype, portable Windows binary,
-green CI, 7 unit tests.
+green CI, 9 unit tests.
 
 ## How to use this plan
 
@@ -32,7 +32,7 @@ Risk: likelihood of regressions or hardware/OS-specific surprises.
 
 | ID | Item | Priority | Effort | Risk | Depends on | Acceptance |
 |---|---|---|---|---|---|---|
-| A1 | **Schema migrations + backup** | P0 | M | Medium | — | `meta.schema` is read, not overwritten. A v1 database migrates to v2; rows survive; a backup is written before migration; a newer schema is refused with a clear message; migration test added. |
+| A1 | **Schema migrations + backup** | P0 | M | Medium | - | `meta.schema` is read, not overwritten. A v1 database migrates to v2; rows survive; a backup is written before migration; a newer schema is refused with a clear message; migration test added. **Implemented in the `migrations` PR.** |
 | A2 | **One-shot semantics** | P1 | S | Medium | Tests | A one-shot layer is consumed by the next input **down**, not when its action eventually runs. A delayed double/hold still uses the one-shot layer for that same gesture; a different key never sees it. Manual pad pass + tests. |
 | A3 | **Pause pad actions while Settings is focused** | P1 | S | Low | — | **Implemented in this PR.** Transient state (pressed keys, pending taps, overlay, one-shot, peek) is cleared; input is ignored while Settings is foreground; Preview and tray legend still work; leaving Settings resumes normal action. |
 | A4 | **Gesture engine tests** | P0 | L | Medium | Refactor | Extract gesture decisions from Tauri/OSD/actions into a testable core with a fake effects sink. Cover: tap only, double only, tap+double, hold only, hold+double, expired pending tap, auto-repeat, knob acceleration, layer switch/back/next/prev, one-shot, momentary hold, focus switch, reload. |
@@ -118,12 +118,12 @@ Risk: likelihood of regressions or hardware/OS-specific surprises.
 
 ## Sequence
 
-### Batch 0 — this PR
+### Batch 0 - merged in #1
 - Roadmap (this file).
 - A3 Settings-focus pause.
 
-### Batch 1 — hardening
-- A1 schema migrations + backup.
+### Batch 1 - hardening
+- A1 schema migrations + backup (implemented in the `migrations` PR).
 - A2 one-shot semantics.
 - C2 YAML dependency replacement.
 - C3 dependency audit policy.
