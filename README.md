@@ -26,8 +26,9 @@ v0.1 public prototype. Windows 10/11 x64, WebView2, and **only** the
 Windows 10, install the WebView2 Evergreen Runtime if it is not already present.
 
 The app is intentionally small and local. It is not yet code-signed, does not
-have an installer, autostart or auto-updater, and the schema has no migration
-framework. Read [docs/review.md](docs/review.md) for the full readiness review
+have an installer, autostart or auto-updater. The local schema now has a
+versioned migration path and pre-migration backups. Read
+[docs/review.md](docs/review.md) for the full readiness review
 and [PUBLISHING.md](PUBLISHING.md) for the release checklist. Changes are listed
 in [CHANGELOG.md](CHANGELOG.md); the remaining gap-closure plan is
 [docs/roadmap.md](docs/roadmap.md).
@@ -115,6 +116,9 @@ rules(position, process, title, class, context_id)
 settings(id=1, json)                         -- pad, gestures, knob, OSD
 meta(key, value)                             -- schema, revision
 ```
+
+The agent checks `meta.schema` on open. Older databases are copied to
+`<db>.bak-v<schema>-<timestamp>` before migration; a newer schema is refused.
 
 The agent watches `meta.revision` and reloads within ~600 ms. YAML is only the
 seed for a fresh database and the export/backup format. The seed is embedded in
@@ -227,7 +231,7 @@ developer tools, test database, log locations and environment variables.
 - Suppression of `F13`–`F18` (they still reach the focused app; harmless in most).
 - Per-game Steam contexts (the client is `steamwebhelper.exe`; games are their
   own process).
-- Schema migrations and automated engine/UI tests.
+- Automated engine/UI tests.
 
 ## Credits
 

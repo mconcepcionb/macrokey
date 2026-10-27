@@ -129,6 +129,11 @@ The UI sends the whole state and the agent validates it (unknown keys, layer
 references, rule contexts) before writing a transaction. A bad save never
 reaches the database.
 
+`meta.schema` gates migrations. A database older than the current schema is copied
+to `<db>.bak-v<schema>-<timestamp>` with `VACUUM INTO` before migration; a newer
+schema is refused with a clear error. The current schema v2 adds the
+`rules(context_id)` index.
+
 ## Test without touching your config
 
 Seed a throwaway database where every press appends to `%TEMP%\macrokey-test.log`
@@ -182,7 +187,7 @@ For the CDP helper, run the app with
 - Suppression of `F13`–`F18` (they still reach the focused app; harmless in most
   apps).
 - Installer, code signing, opt-in autostart, auto-update.
-- Schema migrations and automated engine/UI tests.
+- Automated engine/UI tests.
 - Per-game Steam contexts (the client is `steamwebhelper.exe`; games are their
   own process).
 

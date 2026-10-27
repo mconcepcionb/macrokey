@@ -5,6 +5,8 @@
 - Added `docs/roadmap.md`, the full gap-closure plan.
 - Pad actions pause while the Settings window is focused; Preview and the tray
   legend still work.
+- Schema v2 migration with a pre-migration `VACUUM INTO` backup and a clear
+  refusal for newer schemas; migration/backup tests added (9 tests total).
 
 ## 0.1.0 - 2026-10-26
 

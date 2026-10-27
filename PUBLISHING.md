@@ -8,7 +8,7 @@ releases are self-contained.
 
 - [x] `cargo fmt --check`
 - [x] `cargo clippy --all-targets -- -D warnings`
-- [x] `cargo test` (7 unit tests)
+- [x] `cargo test` (9 unit tests)
 - [x] `vendor/`, `logs/`, `target/`, generated schemas and local databases are
       git-ignored
 - [x] No secrets, tokens or personal paths in tracked source
